@@ -2,6 +2,9 @@
 
 static struct sigaction act, oact;
 
+
+// move : absolute postion
+// addch : cur posiition + 1(x)
 void rs(){
 	refresh();
 	sleep(2);
@@ -29,6 +32,9 @@ int main(){
 	system("clear");
 	return 0;
 }
+bool CheckGameOver(struct Block* block){
+
+}
 
 void InitTetris(){
 	int i,j;
@@ -37,13 +43,15 @@ void InitTetris(){
 		for(i=0;i<WIDTH;i++)
 			field[j][i]=0;
 
-	nextBlock[0]=rand()%7;
-	nextBlock[1]=rand()%7;
-	blockRotate=0;
-	blockY=-1;
-	blockX=WIDTH/2-2;
+	// cur_block_.shape=rand()%7;
+	// next_block_.shape=rand()%7;
+	// cur_block_.rotate=0;
+	// cur_block_.x=WIDTH/2 -2;
+	// cur_block_.y=-1;
+	GetNewBlock();
+
 	score=0;	
-	gameOver=0;
+	gameOver=false;
 	timed_out=0;
 
 	DrawOutline();
@@ -52,10 +60,10 @@ void InitTetris(){
 	DrawField();
 
 
-	DrawBlock(blockY,blockX,nextBlock[0],blockRotate,' ');
-
+	// DrawBlock(blockY,blockX,nextBlock[0],blockRotate,' ');
+	DrawBlock(&cur_block_,' ');
 	
-	DrawNextBlock(nextBlock);
+	DrawNextBlock(next_block_.shape);
 
 
 	PrintScore(score);
@@ -106,31 +114,45 @@ int GetCommand(){
 
 int ProcessCommand(int command){
 	int ret=1;
-	int drawFlag=0;
+	bool drawFlag=0;
+	struct Block check_block=cur_block_;
+
 	switch(command){
 	case QUIT:
 		ret = QUIT;
 		break;
 	case KEY_UP:
-		if((drawFlag = CheckToMove(field,nextBlock[0],(blockRotate+1)%4,blockY,blockX)))
-			blockRotate=(blockRotate+1)%4;
+		check_block.rotate=(check_block.rotate+1)%4;
+		// if((drawFlag = CheckToMove(field,&check_block) )){
+
+		// }
+			// blockRotate=(blockRotate+1)%4;
+			// cur_block_.rotate=(cur_block_.rotate+1)%4;
 		break;
 	case KEY_DOWN:
-		if((drawFlag = CheckToMove(field,nextBlock[0],blockRotate,blockY+1,blockX)))
-			blockY++;
+		check_block.y++;
+		// if((drawFlag = CheckToMove(field,)))
+		// 	// blockY++;
+		// 	cur_block_.y++;
 		break;
 	case KEY_RIGHT:
-		if((drawFlag = CheckToMove(field,nextBlock[0],blockRotate,blockY,blockX+1)))
-			blockX++;
+		check_block.x++;
+		// if((drawFlag = CheckToMove(field,cur_block_.shape,cur_block_.rotate,cur_block_.y,cur_block_.x+1)))
+		// 	// blockX++;
+		// 	cur_block_.x++;
 		break;
 	case KEY_LEFT:
-		if((drawFlag = CheckToMove(field,nextBlock[0],blockRotate,blockY,blockX-1)))
-			blockX--;
+		check_block.x--;
+		// if((drawFlag = CheckToMove(field,cur_block_.shape,cur_block_.rotate,cur_block_.y,cur_block_.x-1)))
+		// 	// blockX--;
+		// 	cur_block_.x--;
 		break;
 	default:
 		break;
 	}
-	if(drawFlag) DrawChange(field,command,nextBlock[0],blockRotate,blockY,blockX);
+	drawFlag= CheckToMove(field,&check_block);
+	if(drawFlag==true) DrawChange(field,&cur_block_,&check_block);
+
 	return ret;	
 }
 
@@ -155,12 +177,12 @@ void PrintScore(int score){
 	printw("%8d",score);
 }
 
-void DrawNextBlock(int *nextBlock){
+void DrawNextBlock(int next_blk_shape){
 	int i, j;
 	for( i = 0; i < 4; i++ ){
 		move(4+i,WIDTH+13);
 		for( j = 0; j < 4; j++ ){
-			if( block[nextBlock[1]][0][i][j] == 1 ){
+			if( block[next_blk_shape][0][i][j] == 1 ){
 				attron(A_REVERSE);
 				printw(" ");
 				attroff(A_REVERSE);
@@ -170,12 +192,12 @@ void DrawNextBlock(int *nextBlock){
 	}
 }
 
-void DrawBlock(int y, int x, int blockID,int blockRotate,char tile){
+void DrawBlock(struct Block* cur_blk,char tile){
 	int i,j;
-	for(i=0;i<4;i++)
-		for(j=0;j<4;j++){
-			if(block[blockID][blockRotate][i][j]==1 && i+y>=0){
-				move(i+y+1,j+x+1);
+	for(i=0;i<BLOCK_HEIGHT;i++)
+		for(j=0;j<BLOCK_WIDTH;j++){
+			if(block[cur_blk->shape][cur_blk->shape][i][j]==true && i+cur_blk->y>=0){
+				move(i+cur_blk->y+1,j+cur_blk->x+1);
 				attron(A_REVERSE);
 				printw("%c",tile);
 				attroff(A_REVERSE);
@@ -183,6 +205,22 @@ void DrawBlock(int y, int x, int blockID,int blockRotate,char tile){
 		}
 
 	move(HEIGHT,WIDTH+10);
+}
+
+void DeleteBlock(struct Block* blk){
+	int i,j;
+	for(i=0;i<BLOCK_HEIGHT;i++)
+		for(j=0;j<BLOCK_WIDTH;j++){
+			if(block[blk->shape][blk->shape][i][j]==true && i+blk->y>=0){
+				move(i+blk->y+1,j+blk->x+1);
+
+				printw("%c",'.');
+
+			}
+		}
+
+	move(HEIGHT,WIDTH+10);
+
 }
 
 void DrawBox(int y,int x, int height, int width){
@@ -210,24 +248,35 @@ void play(){
 	clear();
 	act.sa_handler = BlockDown;
 	sigaction(SIGALRM,&act,&oact);
+	// signal(SIGALRM,BlockDown);
 	InitTetris();
 	do{
-		if(timed_out==0){
+		// if(timed_out==0){
 			alarm(1);
-			timed_out=1;
-		}
+			// timed_out=1;
+		// }
 
 		command = GetCommand();
-		if(ProcessCommand(command)==QUIT){
-			alarm(0);
-			DrawBox(HEIGHT/2-1,WIDTH/2-5,1,10);
-			move(HEIGHT/2,WIDTH/2-4);
-			printw("Good-bye!!");
-			refresh();
-			getch();
+		// if(ProcessCommand(command)==QUIT){
+		// 	alarm(0);
+		// 	DrawBox(HEIGHT/2-1,WIDTH/2-5,1,10);
+		// 	move(HEIGHT/2,WIDTH/2-4);
+		// 	printw("Good-bye!!");
+		// 	refresh();
+		// 	getch();
 
-			return;
-		}
+		// 	return;
+		// }
+		// struct Block check_block=cur_block_;
+		// check_block.y++;
+		// bool can_move=CheckToMove(field,&check_block);
+		// if(!can_move){
+		// 	Freeze();
+		// 	gameOver=CheckGameOver(&cur_block_);
+		// 	GetNewBlock();
+		// }
+
+
 	}while(!gameOver);
 
 	alarm(0);
@@ -250,22 +299,67 @@ char menu(){
 
 /////////////////////////첫주차 실습에서 구현해야 할 함수/////////////////////////
 
-int CheckToMove(char f[HEIGHT][WIDTH],int currentBlock,int blockRotate, int blockY, int blockX){
+bool CheckToMove(char f[HEIGHT][WIDTH],struct Block* check_block){
 	// user code
+	int i;
+	int j;
+	// char cur_block_pos[BLOCK_HEIGHT][BLOCK_WIDTH];
+	// memcpy(cur_block_pos,block[check_block->shape][check_block->rotate],BLOCK_HEIGHT*BLOCK_WIDTH);
+
+	for(i=0;i<BLOCK_HEIGHT;i++){
+		for(j=0;j<BLOCK_WIDTH;j++){
+			if(block[check_block->shape][check_block->shape][i][j]==1){
+
+				if(f[check_block->y+i][check_block->x+j]==1){
+					return false;	
+				}
+				if(check_block->x+j<=0||check_block->x+j>=WIDTH){
+					return false;
+				}
+
+			}
+		}
+	}
+	return true;
 }
 
-void DrawChange(char f[HEIGHT][WIDTH],int command,int currentBlock,int blockRotate, int blockY, int blockX){
+void DrawChange(char f[HEIGHT][WIDTH],struct Block* prev_block,struct Block* new_block){
 	// user code
-
+	DeleteBlock(prev_block);
+	DrawBlock(new_block,' ');
+	// *prev_block=*new_block;
+	memcpy(prev_block,new_block,sizeof *prev_block);
 	//1. 이전 블록 정보를 찾는다. ProcessCommand의 switch문을 참조할 것
 	//2. 이전 블록 정보를 지운다. DrawBlock함수 참조할 것.
 	//3. 새로운 블록 정보를 그린다. 
 }
-
+int b;
 void BlockDown(int sig){
+	if(!b){
+		b='b';
+	}
+	b++;
 	// user code
-
+	// CheckToMove()
+	// addch(b);
 	//강의자료 p26-27의 플로우차트를 참고한다.
+	bool can_move;
+	// can_move=CheckToMove()
+	struct Block check_block=cur_block_;
+	check_block.y++;
+	can_move=CheckToMove(field,&check_block);
+	if(!can_move){ // if block y == -1
+		// printw("cant move !");
+		Freeze();
+		gameOver=CheckGameOver(&cur_block_);
+		GetNewBlock();
+		return;
+	}else{
+				// printw("no, can move !");
+		DrawChange(field,&cur_block_,&check_block);
+	}
+
+	// AddBlockToField()
 }
 
 void AddBlockToField(char f[HEIGHT][WIDTH],int currentBlock,int blockRotate, int blockY, int blockX){
@@ -408,4 +502,16 @@ int recommend(RecNode *root){
 
 void recommendedPlay(){
 	// user code
+}
+
+void Freeze(){
+
+}
+
+void GetNewBlock(){
+	cur_block_.shape=rand()%7;
+	next_block_.shape=rand()%7;
+	cur_block_.rotate=0;
+	cur_block_.x=WIDTH/2 -2;
+	cur_block_.y=-1;
 }
