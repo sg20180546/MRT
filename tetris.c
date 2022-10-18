@@ -16,7 +16,7 @@ int main(){
 	initscr();
 	noecho();
 	keypad(stdscr, TRUE);	
-
+	curs_set(false);
 	srand((unsigned int)time(NULL));
 
 	while(!exit){
@@ -33,7 +33,7 @@ int main(){
 	return 0;
 }
 bool CheckGameOver(struct Block* block){
-
+	return false;
 }
 
 void InitTetris(){
@@ -43,11 +43,10 @@ void InitTetris(){
 		for(i=0;i<WIDTH;i++)
 			field[j][i]=0;
 
-	// cur_block_.shape=rand()%7;
-	// next_block_.shape=rand()%7;
-	// cur_block_.rotate=0;
-	// cur_block_.x=WIDTH/2 -2;
-	// cur_block_.y=-1;
+	// for(i=0;i<WIDTH;i++){
+	// 	field[j][i]=1;
+	// }
+
 	GetNewBlock();
 
 	score=0;	
@@ -123,29 +122,22 @@ int ProcessCommand(int command){
 		break;
 	case KEY_UP:
 		check_block.rotate=(check_block.rotate+1)%4;
-		// if((drawFlag = CheckToMove(field,&check_block) )){
-
-		// }
-			// blockRotate=(blockRotate+1)%4;
-			// cur_block_.rotate=(cur_block_.rotate+1)%4;
 		break;
 	case KEY_DOWN:
 		check_block.y++;
-		// if((drawFlag = CheckToMove(field,)))
-		// 	// blockY++;
-		// 	cur_block_.y++;
 		break;
 	case KEY_RIGHT:
 		check_block.x++;
-		// if((drawFlag = CheckToMove(field,cur_block_.shape,cur_block_.rotate,cur_block_.y,cur_block_.x+1)))
-		// 	// blockX++;
-		// 	cur_block_.x++;
 		break;
 	case KEY_LEFT:
 		check_block.x--;
-		// if((drawFlag = CheckToMove(field,cur_block_.shape,cur_block_.rotate,cur_block_.y,cur_block_.x-1)))
-		// 	// blockX--;
-		// 	cur_block_.x--;
+		break;
+	case KEY_SPACE:
+		// check_block.y++;
+		while(CheckToMove(field,&check_block)){
+			check_block.y++;
+		}
+		check_block.y--;
 		break;
 	default:
 		break;
@@ -196,11 +188,14 @@ void DrawBlock(struct Block* cur_blk,char tile){
 	int i,j;
 	for(i=0;i<BLOCK_HEIGHT;i++)
 		for(j=0;j<BLOCK_WIDTH;j++){
-			if(block[cur_blk->shape][cur_blk->shape][i][j]==true && i+cur_blk->y>=0){
+			if(block[cur_blk->shape][cur_blk->rotate][i][j]==true && i+cur_blk->y>=0){
 				move(i+cur_blk->y+1,j+cur_blk->x+1);
 				attron(A_REVERSE);
 				printw("%c",tile);
 				attroff(A_REVERSE);
+			}else{
+				// move(i+cur_blk->y+1,j+cur_blk->x+1);
+				// printw("x");
 			}
 		}
 
@@ -211,7 +206,7 @@ void DeleteBlock(struct Block* blk){
 	int i,j;
 	for(i=0;i<BLOCK_HEIGHT;i++)
 		for(j=0;j<BLOCK_WIDTH;j++){
-			if(block[blk->shape][blk->shape][i][j]==true && i+blk->y>=0){
+			if(block[blk->shape][blk->rotate][i][j]==true && i+blk->y>=0){
 				move(i+blk->y+1,j+blk->x+1);
 
 				printw("%c",'.');
@@ -242,7 +237,9 @@ void DrawBox(int y,int x, int height, int width){
 		addch(ACS_HLINE);
 	addch(ACS_LRCORNER);
 }
-
+void bf(){
+ // for gdb break point
+}
 void play(){
 	int command;
 	clear();
@@ -257,24 +254,33 @@ void play(){
 		// }
 
 		command = GetCommand();
-		// if(ProcessCommand(command)==QUIT){
-		// 	alarm(0);
-		// 	DrawBox(HEIGHT/2-1,WIDTH/2-5,1,10);
-		// 	move(HEIGHT/2,WIDTH/2-4);
-		// 	printw("Good-bye!!");
-		// 	refresh();
-		// 	getch();
+		if(ProcessCommand(command)==QUIT){
+			alarm(0);
+			DrawBox(HEIGHT/2-1,WIDTH/2-5,1,10);
+			move(HEIGHT/2,WIDTH/2-4);
+			printw("Good-bye!!");
+			refresh();
+			getch();
+			// bf();
+			return;
+		}
+		struct Block check_block=cur_block_;
+		check_block.y++;
+		bool can_move=CheckToMove(field,&check_block);
+		if(!can_move){
 
-		// 	return;
-		// }
-		// struct Block check_block=cur_block_;
-		// check_block.y++;
-		// bool can_move=CheckToMove(field,&check_block);
-		// if(!can_move){
-		// 	Freeze();
-		// 	gameOver=CheckGameOver(&cur_block_);
-		// 	GetNewBlock();
-		// }
+			Freeze();
+			int delta=BreakLine();
+			if(delta>0){
+				DrawField();
+				score+=delta;
+				PrintScore(score);
+			}
+
+			gameOver=CheckGameOver(&cur_block_);
+			GetNewBlock();
+			DrawNextBlock(next_block_.shape);
+		}
 
 
 	}while(!gameOver);
@@ -308,12 +314,16 @@ bool CheckToMove(char f[HEIGHT][WIDTH],struct Block* check_block){
 
 	for(i=0;i<BLOCK_HEIGHT;i++){
 		for(j=0;j<BLOCK_WIDTH;j++){
-			if(block[check_block->shape][check_block->shape][i][j]==1){
+			if(block[check_block->shape][check_block->rotate][i][j]==1){
+				
+				if(check_block->y+i>=HEIGHT ){
+					return false;
+				}
 
 				if(f[check_block->y+i][check_block->x+j]==1){
 					return false;	
 				}
-				if(check_block->x+j<=0||check_block->x+j>=WIDTH){
+				if(check_block->x+j<0 || check_block->x+j>=WIDTH){
 					return false;
 				}
 
@@ -353,6 +363,7 @@ void BlockDown(int sig){
 		Freeze();
 		gameOver=CheckGameOver(&cur_block_);
 		GetNewBlock();
+		DrawNextBlock(next_block_.shape);
 		return;
 	}else{
 				// printw("no, can move !");
@@ -505,7 +516,16 @@ void recommendedPlay(){
 }
 
 void Freeze(){
+	int i;
+	int j;
 
+	for(i=0;i<BLOCK_HEIGHT;i++){
+		for(j=0;j<BLOCK_WIDTH;j++){
+			if(block[cur_block_.shape][cur_block_.rotate][i][j]==1){
+				field[cur_block_.y+i][cur_block_.x+j]=1;
+			}			
+		}
+	}
 }
 
 void GetNewBlock(){
@@ -514,4 +534,29 @@ void GetNewBlock(){
 	cur_block_.rotate=0;
 	cur_block_.x=WIDTH/2 -2;
 	cur_block_.y=-1;
+}
+
+int BreakLine(){
+	int i;
+	int j;
+	int delta=0;
+	for(i=HEIGHT-1;i>=0;i--){
+		bool can_break=true;
+
+		for(j=0;j<WIDTH-1;j+=2){
+			if(!field[i][j] || !field[i][j+1]){
+				// 0,1 / 2,3 / 4,5 / 6,7 / 8,9 
+				can_break=false;
+			}
+		}
+
+		if(can_break){
+			// bf();
+			memcpy(field[1],field[0],sizeof(char)*WIDTH*(i));
+			delta++;
+			i++;
+		}
+	}
+
+	return delta;
 }

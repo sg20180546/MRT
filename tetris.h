@@ -9,7 +9,7 @@
 #include <signal.h>
 #include <string.h>
 #include <stdbool.h>
-
+#include "list.h"
 #define WIDTH	10
 #define HEIGHT	22
 #define NOTHING	0
@@ -81,7 +81,7 @@ const char block[NUM_OF_SHAPE][NUM_OF_ROTATE][BLOCK_HEIGHT][BLOCK_WIDTH] ={
 			{0, 0, 0, 0}, {0, 1, 1, 0}, {0, 0, 1, 0}, {0, 0, 1, 0}
 		}
 	},
-	{/*[3][][][];					  ▩*/
+	{/*[3][][][];					   ▩*/
 		{/*[][0][][]				  ▩▩▩*/
 			{0, 0, 0, 0}, {0, 1, 0, 0}, {1, 1, 1, 0}, {0, 0, 0, 0}
 		},
@@ -164,6 +164,7 @@ struct Block{
 	int rotate;
 	int x;
 	int y;
+	struct list_elem elem;
 };
 struct Block cur_block_;
 struct Block next_block_;
@@ -387,4 +388,6 @@ bool CheckGameOver(struct Block* block);
 void Freeze();
 
 void GetNewBlock();
+
+int BreakLine();
 #endif
