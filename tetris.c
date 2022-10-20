@@ -32,7 +32,18 @@ int main(){
 	system("clear");
 	return 0;
 }
-bool CheckGameOver(struct Block* block){
+bool CheckGameOver(struct Block* blk){
+	int i;
+	int j;
+	for(i=0;i<BLOCK_HEIGHT;i++){
+		for(j=0;j<BLOCK_WIDTH;j++){
+			if(block[blk->shape][blk->rotate][i][j]==1){
+				if(field[blk->y + i][blk->x+j]==1){
+					return true;
+				}
+			}
+		}
+	}
 	return false;
 }
 
@@ -277,8 +288,9 @@ void play(){
 				PrintScore(score);
 			}
 
-			gameOver=CheckGameOver(&cur_block_);
+
 			GetNewBlock();
+			gameOver=CheckGameOver(&cur_block_);
 			DrawNextBlock(next_block_.shape);
 		}
 
