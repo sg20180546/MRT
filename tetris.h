@@ -8,7 +8,8 @@
 #include <ncurses.h>
 #include <signal.h>
 #include <string.h>
-
+#include <stdbool.h>
+#include "list.h"
 #define WIDTH	10
 #define HEIGHT	22
 #define NOTHING	0
@@ -53,7 +54,7 @@ const char block[NUM_OF_SHAPE][NUM_OF_ROTATE][BLOCK_HEIGHT][BLOCK_WIDTH] ={
 		}
 	},
 	{/*[1][][][];					  ▩▩▩*/
-		{/*[][0][][]				      ▩*/
+		{/*[][0][][]				    ▩*/
 			{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 1, 1, 1}, {0, 0, 0, 1}
 		},
 		{/*[][1][][]*/
@@ -80,8 +81,8 @@ const char block[NUM_OF_SHAPE][NUM_OF_ROTATE][BLOCK_HEIGHT][BLOCK_WIDTH] ={
 			{0, 0, 0, 0}, {0, 1, 1, 0}, {0, 0, 1, 0}, {0, 0, 1, 0}
 		}
 	},
-	{/*[3][][][];					  ▩▩▩*/
-		{/*[][0][][]				    ▩*/
+	{/*[3][][][];					   ▩*/
+		{/*[][0][][]				  ▩▩▩*/
 			{0, 0, 0, 0}, {0, 1, 0, 0}, {1, 1, 1, 0}, {0, 0, 0, 0}
 		},
 		{/*[][1][][]*/
@@ -108,7 +109,7 @@ const char block[NUM_OF_SHAPE][NUM_OF_ROTATE][BLOCK_HEIGHT][BLOCK_WIDTH] ={
 			{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 1, 1, 0}, {0, 1, 1, 0}
 		}
 	},
-	{/*[5][][][];					  ▩▩*/
+	{/*[5][][][];					 ▩▩*/
 		{/*[][0][][]				▩▩*/
 			{0, 0, 0, 0}, {0, 0, 1, 1}, {0, 1, 1, 0}, {0, 0, 0, 0}
 		},
@@ -123,7 +124,7 @@ const char block[NUM_OF_SHAPE][NUM_OF_ROTATE][BLOCK_HEIGHT][BLOCK_WIDTH] ={
 		}
 	},
 	{/*[6][][][];					▩▩*/
-		{/*[][0][][]				  ▩▩*/
+		{/*[][0][][]				 ▩▩*/
 			{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 1, 1, 0}, {0, 0, 1, 1}
 		},
 		{/*[][1][][]*/
@@ -138,11 +139,39 @@ const char block[NUM_OF_SHAPE][NUM_OF_ROTATE][BLOCK_HEIGHT][BLOCK_WIDTH] ={
 	}
 };
 
+/*
+  
+(0,0)------------	
+	|			|
+	|			|
+	|			|
+	|			|
+	|			|
+	|			|
+	|			|
+	|			|
+	-------------(10,22)
+*/
+
+
 char field[HEIGHT][WIDTH];	/* 테트리스의 메인 게임 화면 */
-int nextBlock[BLOCK_NUM];	/* 현재 블럭의 ID와 다음 블럭의 ID들을 저장; [0]: 현재 블럭; [1]: 다음 블럭 */
-int blockRotate,blockY,blockX;	/* 현재 블럭의 회전, 블럭의 Y 좌표, 블럭의 X 좌표*/
+
+// int nextBlock[BLOCK_NUM];	/* 현재 블럭의 ID와 다음 블럭의 ID들을 저장; [0]: 현재 블럭; [1]: 다음 블럭 */
+// int blockRotate,blockY,blockX;	/* 현재 블럭의 회전, 블럭의 Y 좌표, 블럭의 X 좌표*/
+
+struct Block{
+	int shape;
+	int rotate;
+	int x;
+	int y;
+	struct list_elem elem;
+};
+struct Block cur_block_;
+struct Block next_block_;
+
+
 int score;			/* 점수가 저장*/
-int gameOver=0;			/* 게임이 종료되면 1로 setting된다.*/
+bool gameOver=false;			/* 게임이 종료되면 1로 setting된다.*/
 int timed_out;
 int recommendR,recommendY,recommendX; // 추천 블럭 배치 정보. 차례대로 회전, Y 좌표, X 좌표
 RecNode *recRoot;
@@ -206,7 +235,7 @@ void BlockDown(int sig);
  *	return	: (int) 입력에 대한 블럭 움직임이 가능하면 1
  *		  가능하지 않으면 0을 return 한다.
  ***********************************************************/
-int CheckToMove(char f[HEIGHT][WIDTH],int currentBlock,int blockRotate, int blockY, int blockX);
+bool CheckToMove(char f[HEIGHT][WIDTH],struct Block* check_block);
 
 /***********************************************************
  *	테트리스에서 command에 의해 바뀐 부분만 다시 그려준다.
@@ -218,7 +247,8 @@ int CheckToMove(char f[HEIGHT][WIDTH],int currentBlock,int blockRotate, int bloc
  *		  (int) 블럭의 X좌표
  *	return	: none
  ***********************************************************/
-void DrawChange(char f[HEIGHT][WIDTH],int command,int currentBlock,int blockRotate, int blockY, int blockX);
+void DrawChange(char f[HEIGHT][WIDTH],struct Block* prev_block,struct Block* new_block);
+
 
 /***********************************************************
  *	테트리스의 블럭이 쌓이는 field를 그려준다.
@@ -258,7 +288,7 @@ void gotoyx(int y, int x);
  *	input	: (int*) 블럭의 모양에 대한 ID 배열
  *	return	: none
  ***********************************************************/
-void DrawNextBlock(int *nextBlock);
+void DrawNextBlock(int next_blk_shape);
 
 /***********************************************************
  *	테트리스의 화면 오른쪽 하단에 Score를 출력한다.
@@ -286,8 +316,8 @@ void DrawBox(int y,int x, int height, int width);
  *		  (char) 블록을 그릴 패턴 모양
  *	return	: none
  ***********************************************************/
-void DrawBlock(int y, int x, int blockID,int blockRotate,char tile);
-
+void DrawBlock(struct Block* cur_blk,char tile);
+void DeleteBlock(struct Block* blk);
 /***********************************************************
  *	블록이 떨어질 위치를 미리 보여준다.
  *	input	: (int) 그림자를 보여줄 블록의 왼쪽 상단모서리의 y 좌표
@@ -354,5 +384,10 @@ int recommend(RecNode *root);
  ***********************************************************/
 void recommendedPlay();
 
+bool CheckGameOver(struct Block* block);
+void Freeze();
 
+void GetNewBlock();
+
+int BreakLine();
 #endif
