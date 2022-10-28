@@ -8,3 +8,4 @@ list.o:
 
 clean:
 	rm a.out *.o
+
