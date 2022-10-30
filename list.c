@@ -1,5 +1,7 @@
 #include "list.h"
-
+#include <stdio.h>
+#include <stdlib.h>	
+#include <string.h>
 
 
 struct list_elem* list_begin(struct list* list){

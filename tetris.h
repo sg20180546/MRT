@@ -12,6 +12,7 @@
 #include "list.h"
 #include <unistd.h>
 #include <fcntl.h>
+#include "rank.h"
 #define WIDTH	10
 #define HEIGHT	22
 #define NOTHING	0

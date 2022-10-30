@@ -8,8 +8,8 @@ a.out: tetris.o rank.o list.o
 list.o:
 	gcc -c list.c
 
-rank.o:
-	gcc -c rank.c
+rank.o: 
+	gcc -c rank.c 
 
 tetris.o:
 	gcc -c tetris.c

@@ -12,7 +12,9 @@ void rs(){
 
 int main(){
 	int exit=0;
-	fd=open("rank.txt",O_WRONLY);
+	
+	InitRank();
+
 	initscr();
 	noecho();
 	keypad(stdscr, TRUE);	
@@ -485,7 +487,7 @@ void rank() {
 		// Y-=48;
 		printw("%c\n", Y==10 ? ' ': Y);
 		/* code */
-		
+		PrintRank(X,Y);
 		break;
 	case 2:
 		printw("Input the name : ");
@@ -496,26 +498,6 @@ void rank() {
 		break;
 	default:
 		break;
-	}
-
-	//4. 각 메뉴에 따라 입력받을 값을 변수에 저장
-	//4-1. 메뉴1: X, Y를 입력받고 적절한 input인지 확인 후(X<=Y), X와 Y사이의 rank 출력
-	if (ch == '1') {
-
-	}
-
-	//4-2. 메뉴2: 문자열을 받아 저장된 이름과 비교하고 이름에 해당하는 리스트를 출력
-	else if (ch == '2') {
-		char str[NAMELEN + 1];
-		int check = 0;
-
-
-	}
-
-	//4-3. 메뉴3: rank번호를 입력받아 리스트에서 삭제
-	else if (ch == '3') {
-		int num;
-
 	}
 	getch();
 
