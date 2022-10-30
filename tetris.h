@@ -10,6 +10,8 @@
 #include <string.h>
 #include <stdbool.h>
 #include "list.h"
+#include <unistd.h>
+#include <fcntl.h>
 #define WIDTH	10
 #define HEIGHT	22
 #define NOTHING	0
@@ -40,6 +42,7 @@ typedef struct _RecNode{
 } RecNode;
 
 
+int fd;
 long block_id;
 /* [blockShapeID][# of rotate][][]*/
 const char block[NUM_OF_SHAPE][NUM_OF_ROTATE][BLOCK_HEIGHT][BLOCK_WIDTH] ={

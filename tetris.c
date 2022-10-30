@@ -12,7 +12,7 @@ void rs(){
 
 int main(){
 	int exit=0;
-
+	fd=open("rank.txt",O_WRONLY);
 	initscr();
 	noecho();
 	keypad(stdscr, TRUE);	
@@ -24,6 +24,9 @@ int main(){
 		switch(menu()){
 		case MENU_PLAY: 
 			play(); 
+			break;
+		case MENU_RANK:
+			rank();
 			break;
 		case MENU_EXIT: 
 			exit=1; 
@@ -452,12 +455,48 @@ void rank() {
 	// int X = 1, Y = score_number
 	int ch, i, j;
 	clear();
-
+	int X,Y;
+	char inputname[NAMELEN+1];
 	//2. printw()로 3개의 메뉴출력
-
-
+	printw("1. list ranks from X to Y\n");
+	printw("2. list ranks by specific name\n");
+	printw("3. delete a specifc rank\n");	
+	// printw()
+	ch=wgetch(stdscr);
+	// printw("%d\n",ch);
+	if(ch<='0' || ch>'3'){
+		printw("Failure :: No Such Mode : %d\n",ch);
+		getch();
+		return;
+	}
+	ch-=48;
 	//3. wgetch()를 사용하여 변수 ch에 입력받은 메뉴번호 저장
 
+	switch (ch)
+	{
+	case 1:
+
+		printw("X : ");
+		X=wgetch(stdscr);
+		// X-=48;
+		printw("%c\n", X==10 ? ' ' :X);
+		printw("Y : ");
+		Y=wgetch(stdscr);
+		// Y-=48;
+		printw("%c\n", Y==10 ? ' ': Y);
+		/* code */
+		
+		break;
+	case 2:
+		printw("Input the name : ");
+		getstr(inputname);
+		printw("\b%s",inputname);
+		break;
+	case 3:
+		break;
+	default:
+		break;
+	}
 
 	//4. 각 메뉴에 따라 입력받을 값을 변수에 저장
 	//4-1. 메뉴1: X, Y를 입력받고 적절한 input인지 확인 후(X<=Y), X와 Y사이의 rank 출력
