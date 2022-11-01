@@ -13,6 +13,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include "rank.h"
+
+
 #define WIDTH	10
 #define HEIGHT	22
 #define NOTHING	0
@@ -32,7 +34,7 @@
 #define MENU_EXIT '4'
 
 // 사용자 이름의 길이
-#define NAMELEN 16
+
 
 #define CHILDREN_MAX 36
 
@@ -41,6 +43,7 @@ typedef struct _RecNode{
 	char (*f)[WIDTH];
 	struct _RecNode *c[CHILDREN_MAX];
 } RecNode;
+
 
 
 int fd;
@@ -374,12 +377,6 @@ void rank();
  ***********************************************************/
 void writeRankFile();
 
-/***********************************************************
- *	새로운 랭킹 정보를 추가한다.
- *	input	: (int) 새로운 랭킹의 점수
- *	return	: none
- ***********************************************************/
-void newRank(int score);
 
 /***********************************************************
  *	추천 블럭 배치를 구한다.

@@ -1,18 +1,19 @@
-﻿
-OBEJCT= tetris.o rank.o list.o
+﻿OBEJCT= tetris.o rank.o list.o
+CFLAGS=-g -c
+CC=gcc
 
-.PHONY: a.out
+.PHONY: a.out tetris.o
 a.out: tetris.o rank.o list.o
-	gcc -g -o $@ $(OBEJCT) -lncurses
+	$(CC) -g -o $@ $(OBEJCT) -lncurses
 
 list.o:
-	gcc -c list.c
+	$(CC) $(CFLAGS) list.c
 
 rank.o: 
-	gcc -c rank.c 
+	$(CC) $(CFLAGS) rank.c 
 
 tetris.o:
-	gcc -c tetris.c
+	$(CC) $(CFLAGS) tetris.c
 
 clean:
 	rm a.out *.o

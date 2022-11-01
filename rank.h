@@ -13,24 +13,32 @@
 
 #define FILENAME "rank.txt"
 #define MAXLINE 256
-
+#define BUFSIZE 4096
+#define NAMELEN 16
 struct RankElem{
     char name[MAXLINE];
     int point;
     struct list_elem elem;
 };
 
-void InitRank();
-
-void RankXtoY(int X,int Y);
-
-void RankByName(char* name);
-
-void DeleteIdx(int idx);
-
 FILE * fp;
 
 struct list rank_list;
 int rank_list_size;
+
+char buf[BUFSIZE];
+
+void InitRank();
+
+void PrintRankXtoY(int X,int Y);
+
+void PrintRankByName(char * name);
+
+void DeleteRankByIdx(int idx);
+
+void SyncRankFile();
+
+void NewRank(int score);
+
 
 #endif

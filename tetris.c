@@ -1,5 +1,6 @@
 ﻿#include "tetris.h"
 
+
 static struct sigaction act, oact;
 
 
@@ -295,7 +296,7 @@ void play(){
 			int delta=BreakLine();
 			if(delta>0){
 				DrawField();
-				score+=delta;
+				score+=(delta*10);
 				PrintScore(score);
 			}
 
@@ -313,7 +314,7 @@ void play(){
 	printw("GameOver!!");
 	refresh();
 	getch();
-	newRank(score);
+	NewRank(score);
 }
 
 char menu(){
@@ -414,7 +415,6 @@ int DeleteLine(char f[HEIGHT][WIDTH]){
 void DrawShadow(struct Block changed){
 
 
-
 }
 
 
@@ -458,7 +458,8 @@ void rank() {
 	int ch, i, j;
 	clear();
 	int X,Y;
-	char inputname[NAMELEN+1];
+
+
 	//2. printw()로 3개의 메뉴출력
 	printw("1. list ranks from X to Y\n");
 	printw("2. list ranks by specific name\n");
@@ -477,24 +478,47 @@ void rank() {
 	switch (ch)
 	{
 	case 1:
-
 		printw("X : ");
-		X=wgetch(stdscr);
-		// X-=48;
-		printw("%c\n", X==10 ? ' ' :X);
+		getstr(buf);
+		move(3,4);
+		if(!strcmp(buf,"\0")){
+			X=0;
+			printw("\n");
+		}else{
+			X=atoi(buf);
+			printw("%d\n",X);
+		}
+
+
 		printw("Y : ");
-		Y=wgetch(stdscr);
-		// Y-=48;
-		printw("%c\n", Y==10 ? ' ': Y);
-		/* code */
-		PrintRank(X,Y);
+		getstr(buf);
+		move(4,4);
+		if(!strcmp(buf,"\0")){
+			Y=INT32_MAX;
+			printw("\n");
+		}else{
+			Y=atoi(buf);
+			printw("%d\n",Y);
+		}
+
+		PrintRankXtoY(X-1,Y);
 		break;
 	case 2:
 		printw("Input the name : ");
-		getstr(inputname);
-		printw("\b%s",inputname);
+		getstr(buf);
+		move(3,17);
+		printw("%s\n",buf);
+
+		PrintRankByName(buf);
 		break;
 	case 3:
+		printw("Input the rank : ");
+		getstr(buf);
+		move(3,17);
+		printw("%s\n",buf);
+		X=atoi(buf);
+
+		DeleteRankByIdx(X-1);
 		break;
 	default:
 		break;
@@ -524,22 +548,6 @@ void writeRankFile() {
 	// free(a.rank_score);
 }
 
-void newRank(int score) {
-	// 목적: GameOver시 호출되어 사용자 이름을 입력받고 score와 함께 리스트의 적절한 위치에 저장
-	char str[NAMELEN + 1];
-	int i, j;
-	clear();
-	//1. 사용자 이름을 입력받음
-
-	//2. 새로운 노드를 생성해 이름과 점수를 저장, score_number가
-	// if () {
-
-	// }
-	// else {
-
-	// }
-	writeRankFile();
-}
 
 void DrawRecommend(int y, int x, int blockID,int blockRotate){
 	// user code
