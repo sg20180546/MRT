@@ -1,5 +1,6 @@
 ﻿#include "tetris.h"
 
+
 static struct sigaction act, oact;
 
 
@@ -12,6 +13,8 @@ void rs(){
 
 int main(){
 	int exit=0;
+	
+	InitRank();
 
 	initscr();
 	noecho();
@@ -22,8 +25,15 @@ int main(){
 	while(!exit){
 		clear();
 		switch(menu()){
-		case MENU_PLAY: play(); break;
-		case MENU_EXIT: exit=1; break;
+		case MENU_PLAY: 
+			play(); 
+			break;
+		case MENU_RANK:
+			rank();
+			break;
+		case MENU_EXIT: 
+			exit=1; 
+			break;
 		default: break;
 		}
 	}
@@ -49,16 +59,16 @@ bool CheckGameOver(struct Block* blk){
 
 void InitTetris(){
 	int i,j;
-
+	block_id=0;
 	for(j=0;j<HEIGHT;j++)
 		for(i=0;i<WIDTH;i++)
 			field[j][i]=0;
 
-	// for(i=0;i<WIDTH;i++){
-	// 	field[j][i]=1;
-	// }
 
-	GetNewBlock();
+	// GetNewBlock();
+	InitBlock(&cur_block_);
+	InitBlock(&next_block_);
+
 
 	score=0;	
 	gameOver=false;
@@ -69,8 +79,6 @@ void InitTetris(){
 	
 	DrawField();
 
-
-	// DrawBlock(blockY,blockX,nextBlock[0],blockRotate,' ');
 	DrawBlock(&cur_block_,' ');
 	
 	DrawNextBlock(next_block_.shape);
@@ -124,7 +132,7 @@ int GetCommand(){
 
 int ProcessCommand(int command){
 	int ret=1;
-	bool drawFlag=0;
+	bool can_move=0;
 	struct Block check_block=cur_block_;
 
 	switch(command){
@@ -144,8 +152,7 @@ int ProcessCommand(int command){
 		check_block.x--;
 		break;
 	case KEY_SPACE:
-		// check_block.y++;
-		while(CheckToMove(field,&check_block)){
+		while(CheckToMove(&check_block)){
 			check_block.y++;
 		}
 		check_block.y--;
@@ -153,8 +160,11 @@ int ProcessCommand(int command){
 	default:
 		break;
 	}
-	drawFlag= CheckToMove(field,&check_block);
-	if(drawFlag==true) DrawChange(field,&cur_block_,&check_block);
+	can_move= CheckToMove(&check_block);
+
+	if(can_move==true){ 
+		DrawChange(&cur_block_,&check_block);
+	}
 
 	return ret;	
 }
@@ -259,11 +269,11 @@ void play(){
 	// signal(SIGALRM,BlockDown);
 	InitTetris();
 	do{
-		// if(timed_out==0){
+		if(timed_out==0){
 			alarm(1);
-			// timed_out=1;
-		// }
-
+			timed_out=1;
+		}
+		// DeleteBlock(&shadow_);
 		command = GetCommand();
 		if(ProcessCommand(command)==QUIT){
 			alarm(0);
@@ -272,29 +282,29 @@ void play(){
 			printw("Good-bye!!");
 			refresh();
 			getch();
-			// bf();
+
 			return;
 		}
 		struct Block check_block=cur_block_;
 		check_block.y++;
-		bool can_move=CheckToMove(field,&check_block);
-		if(!can_move){
+		bool can_move=CheckToMove(&check_block);
 
+
+		if(!can_move){
+			DrawBlock(&cur_block_,' ');
 			Freeze();
 			int delta=BreakLine();
 			if(delta>0){
 				DrawField();
-				score+=delta;
+				score+=(delta*10);
 				PrintScore(score);
 			}
 
-
-			GetNewBlock();
+			cur_block_=next_block_;
+			InitBlock(&next_block_);
 			gameOver=CheckGameOver(&cur_block_);
 			DrawNextBlock(next_block_.shape);
 		}
-
-
 	}while(!gameOver);
 
 	alarm(0);
@@ -304,7 +314,7 @@ void play(){
 	printw("GameOver!!");
 	refresh();
 	getch();
-	newRank(score);
+	NewRank(score);
 }
 
 char menu(){
@@ -317,12 +327,11 @@ char menu(){
 
 /////////////////////////첫주차 실습에서 구현해야 할 함수/////////////////////////
 
-bool CheckToMove(char f[HEIGHT][WIDTH],struct Block* check_block){
-	// user code
+bool CheckToMove(struct Block* check_block){
+
 	int i;
 	int j;
-	// char cur_block_pos[BLOCK_HEIGHT][BLOCK_WIDTH];
-	// memcpy(cur_block_pos,block[check_block->shape][check_block->rotate],BLOCK_HEIGHT*BLOCK_WIDTH);
+
 
 	for(i=0;i<BLOCK_HEIGHT;i++){
 		for(j=0;j<BLOCK_WIDTH;j++){
@@ -332,7 +341,7 @@ bool CheckToMove(char f[HEIGHT][WIDTH],struct Block* check_block){
 					return false;
 				}
 
-				if(f[check_block->y+i][check_block->x+j]==1){
+				if(field[check_block->y+i][check_block->x+j]==1){
 					return false;	
 				}
 				if(check_block->x+j<0 || check_block->x+j>=WIDTH){
@@ -345,50 +354,53 @@ bool CheckToMove(char f[HEIGHT][WIDTH],struct Block* check_block){
 	return true;
 }
 
-void DrawChange(char f[HEIGHT][WIDTH],struct Block* prev_block,struct Block* new_block){
-	// user code
-	DeleteBlock(prev_block);
-	DrawBlock(new_block,' ');
-	// *prev_block=*new_block;
-	memcpy(prev_block,new_block,sizeof *prev_block);
-	//1. 이전 블록 정보를 찾는다. ProcessCommand의 switch문을 참조할 것
-	//2. 이전 블록 정보를 지운다. DrawBlock함수 참조할 것.
-	//3. 새로운 블록 정보를 그린다. 
-}
-int b;
-void BlockDown(int sig){
-	if(!b){
-		b='b';
+void DrawChange(struct Block* prev_block,struct Block* new_block){
+	if(shadow_.bid==new_block->bid){
+		DeleteBlock(&shadow_);
 	}
-	b++;
-	// user code
-	// CheckToMove()
-	// addch(b);
-	//강의자료 p26-27의 플로우차트를 참고한다.
+
+	DeleteBlock(prev_block);
+
+
+	DrawBlock(new_block,' ');
+
+	shadow_=*new_block;
+	while(CheckToMove(&shadow_)){
+		shadow_.y++;
+	}
+	shadow_.y--;
+	DrawBlock(&shadow_,'/');
+
+	memcpy(prev_block,new_block,sizeof *prev_block);
+
+}
+void BlockDown(int sig){
+
+
 	bool can_move;
-	// can_move=CheckToMove()
+
 	struct Block check_block=cur_block_;
 	check_block.y++;
-	can_move=CheckToMove(field,&check_block);
-	if(!can_move){ // if block y == -1
-		// printw("cant move !");
+	can_move=CheckToMove(&check_block);
+	if(!can_move){ 
+
 		Freeze();
+
 		gameOver=CheckGameOver(&cur_block_);
-		GetNewBlock();
+		cur_block_=next_block_;
+		InitBlock(&next_block_);
 		DrawNextBlock(next_block_.shape);
 		return;
 	}else{
-				// printw("no, can move !");
-		DrawChange(field,&cur_block_,&check_block);
-	}
 
-	// AddBlockToField()
+		DrawChange(&cur_block_,&check_block);
+	}
+	timed_out=0;
+
 }
 
 void AddBlockToField(char f[HEIGHT][WIDTH],int currentBlock,int blockRotate, int blockY, int blockX){
-	// user code
 
-	//Block이 추가된 영역의 필드값을 바꾼다.
 }
 
 int DeleteLine(char f[HEIGHT][WIDTH]){
@@ -400,9 +412,11 @@ int DeleteLine(char f[HEIGHT][WIDTH]){
 
 ///////////////////////////////////////////////////////////////////////////
 
-void DrawShadow(int y, int x, int blockID,int blockRotate){
-	// user code
+void DrawShadow(struct Block changed){
+
+
 }
+
 
 void createRankList() {
 	// 목적: Input파일인 "rank.txt"에서 랭킹 정보를 읽어들임, 읽어들인 정보로 랭킹 목록 생성
@@ -443,31 +457,71 @@ void rank() {
 	// int X = 1, Y = score_number
 	int ch, i, j;
 	clear();
+	int X,Y;
+
 
 	//2. printw()로 3개의 메뉴출력
-
-
+	printw("1. list ranks from X to Y\n");
+	printw("2. list ranks by specific name\n");
+	printw("3. delete a specifc rank\n");	
+	// printw()
+	ch=wgetch(stdscr);
+	// printw("%d\n",ch);
+	if(ch<='0' || ch>'3'){
+		printw("Failure :: No Such Mode : %d\n",ch);
+		getch();
+		return;
+	}
+	ch-=48;
 	//3. wgetch()를 사용하여 변수 ch에 입력받은 메뉴번호 저장
 
+	switch (ch)
+	{
+	case 1:
+		printw("X : ");
+		getstr(buf);
+		move(3,4);
+		if(!strcmp(buf,"\0")){
+			X=0;
+			printw("\n");
+		}else{
+			X=atoi(buf);
+			printw("%d\n",X);
+		}
 
-	//4. 각 메뉴에 따라 입력받을 값을 변수에 저장
-	//4-1. 메뉴1: X, Y를 입력받고 적절한 input인지 확인 후(X<=Y), X와 Y사이의 rank 출력
-	if (ch == '1') {
 
-	}
+		printw("Y : ");
+		getstr(buf);
+		move(4,4);
+		if(!strcmp(buf,"\0")){
+			Y=INT32_MAX;
+			printw("\n");
+		}else{
+			Y=atoi(buf);
+			printw("%d\n",Y);
+		}
 
-	//4-2. 메뉴2: 문자열을 받아 저장된 이름과 비교하고 이름에 해당하는 리스트를 출력
-	else if (ch == '2') {
-		char str[NAMELEN + 1];
-		int check = 0;
+		PrintRankXtoY(X-1,Y);
+		break;
+	case 2:
+		printw("Input the name : ");
+		getstr(buf);
+		move(3,17);
+		printw("%s\n",buf);
 
+		PrintRankByName(buf);
+		break;
+	case 3:
+		printw("Input the rank : ");
+		getstr(buf);
+		move(3,17);
+		printw("%s\n",buf);
+		X=atoi(buf);
 
-	}
-
-	//4-3. 메뉴3: rank번호를 입력받아 리스트에서 삭제
-	else if (ch == '3') {
-		int num;
-
+		DeleteRankByIdx(X-1);
+		break;
+	default:
+		break;
 	}
 	getch();
 
@@ -494,22 +548,6 @@ void writeRankFile() {
 	// free(a.rank_score);
 }
 
-void newRank(int score) {
-	// 목적: GameOver시 호출되어 사용자 이름을 입력받고 score와 함께 리스트의 적절한 위치에 저장
-	char str[NAMELEN + 1];
-	int i, j;
-	clear();
-	//1. 사용자 이름을 입력받음
-
-	//2. 새로운 노드를 생성해 이름과 점수를 저장, score_number가
-	// if () {
-
-	// }
-	// else {
-
-	// }
-	writeRankFile();
-}
 
 void DrawRecommend(int y, int x, int blockID,int blockRotate){
 	// user code
@@ -540,12 +578,14 @@ void Freeze(){
 	}
 }
 
-void GetNewBlock(){
-	cur_block_.shape=rand()%7;
-	next_block_.shape=rand()%7;
-	cur_block_.rotate=0;
-	cur_block_.x=WIDTH/2 -2;
-	cur_block_.y=-1;
+
+
+void InitBlock(struct Block* blk){
+	blk->shape=rand()%7;
+	blk->rotate=0;
+	blk->x=WIDTH/2-2;
+	blk->y=-1;
+	blk->bid=block_id++;
 }
 
 int BreakLine(){

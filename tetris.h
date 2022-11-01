@@ -10,6 +10,11 @@
 #include <string.h>
 #include <stdbool.h>
 #include "list.h"
+#include <unistd.h>
+#include <fcntl.h>
+#include "rank.h"
+
+
 #define WIDTH	10
 #define HEIGHT	22
 #define NOTHING	0
@@ -24,10 +29,12 @@
 
 // menu number
 #define MENU_PLAY '1'
+#define MENU_RANK '2'
+#define MENU_RECM '3'
 #define MENU_EXIT '4'
 
 // 사용자 이름의 길이
-#define NAMELEN 16
+
 
 #define CHILDREN_MAX 36
 
@@ -37,6 +44,10 @@ typedef struct _RecNode{
 	struct _RecNode *c[CHILDREN_MAX];
 } RecNode;
 
+
+
+int fd;
+long block_id;
 /* [blockShapeID][# of rotate][][]*/
 const char block[NUM_OF_SHAPE][NUM_OF_ROTATE][BLOCK_HEIGHT][BLOCK_WIDTH] ={
 	{/*[0][][][]					▩▩▩▩*/
@@ -160,12 +171,15 @@ char field[HEIGHT][WIDTH];	/* 테트리스의 메인 게임 화면 */
 // int blockRotate,blockY,blockX;	/* 현재 블럭의 회전, 블럭의 Y 좌표, 블럭의 X 좌표*/
 
 struct Block{
+	long bid;
 	int shape;
 	int rotate;
 	int x;
 	int y;
 	struct list_elem elem;
 };
+struct Block prev_block_;
+struct Block shadow_;
 struct Block cur_block_;
 struct Block next_block_;
 
@@ -235,7 +249,7 @@ void BlockDown(int sig);
  *	return	: (int) 입력에 대한 블럭 움직임이 가능하면 1
  *		  가능하지 않으면 0을 return 한다.
  ***********************************************************/
-bool CheckToMove(char f[HEIGHT][WIDTH],struct Block* check_block);
+bool CheckToMove(struct Block* check_block);
 
 /***********************************************************
  *	테트리스에서 command에 의해 바뀐 부분만 다시 그려준다.
@@ -247,7 +261,7 @@ bool CheckToMove(char f[HEIGHT][WIDTH],struct Block* check_block);
  *		  (int) 블럭의 X좌표
  *	return	: none
  ***********************************************************/
-void DrawChange(char f[HEIGHT][WIDTH],struct Block* prev_block,struct Block* new_block);
+void DrawChange(struct Block* prev_block,struct Block* new_block);
 
 
 /***********************************************************
@@ -326,7 +340,7 @@ void DeleteBlock(struct Block* blk);
  *		  (int) 블록의 회전 횟수
  *	return	: none
  ***********************************************************/
-void DrawShadow(int y, int x, int blockID,int blockRotate);
+void DrawShadow(struct Block blk);
 
 /***********************************************************
  *	테트리스 게임을 시작한다.
@@ -363,12 +377,6 @@ void rank();
  ***********************************************************/
 void writeRankFile();
 
-/***********************************************************
- *	새로운 랭킹 정보를 추가한다.
- *	input	: (int) 새로운 랭킹의 점수
- *	return	: none
- ***********************************************************/
-void newRank(int score);
 
 /***********************************************************
  *	추천 블럭 배치를 구한다.
@@ -387,7 +395,6 @@ void recommendedPlay();
 bool CheckGameOver(struct Block* block);
 void Freeze();
 
-void GetNewBlock();
-
 int BreakLine();
+void InitBlock(struct Block* blk);
 #endif
