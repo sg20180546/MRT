@@ -41,4 +41,5 @@ struct list_elem* list_remove(struct list_elem* elem);
 
 size_t list_size(struct list* list);
 
+struct list_elem* list_front(struct list* list);
 #endif

@@ -4,6 +4,21 @@
 static struct sigaction act, oact;
 
 
+static void InitBlockList(){
+	struct list_elem* iter;
+	struct Block* b_iter;
+	for(iter=list_begin(&b_list);iter!=list_end(&b_list);){
+		b_iter=list_entry(iter,struct Block,elem);
+		iter=list_remove(iter);
+		free(b_iter);
+	}
+	list_init(&b_list);
+	int i;
+	for(i=0;i<REC_CAL;i++){
+		InitBlock(&b_iter);
+		list_push_back(&b_list,&b_iter->elem);
+	}
+}
 // move : absolute postion
 // addch : cur posiition + 1(x)
 void rs(){
@@ -15,14 +30,16 @@ int main(){
 	int exit=0;
 	
 	InitRank();
+	list_init(&b_list);
 
 	initscr();
 	noecho();
 	keypad(stdscr, TRUE);	
 	curs_set(false);
 	srand((unsigned int)time(NULL));
-
+	list_init(&b_list);
 	while(!exit){
+		InitBlockList();
 		clear();
 		switch(menu()){
 		case MENU_PLAY: 
@@ -66,9 +83,8 @@ void InitTetris(){
 
 
 	// GetNewBlock();
-	InitBlock(&cur_block_);
-	InitBlock(&next_block_);
-
+	cur_block_=list_entry(list_front(&b_list),struct Block,elem);
+	next_block_=list_entry(list_front(&b_list)->next,struct Block,elem);
 
 	score=0;	
 	gameOver=false;
@@ -79,9 +95,9 @@ void InitTetris(){
 	
 	DrawField();
 
-	DrawBlock(&cur_block_,' ');
+	DrawBlock(cur_block_,' ');
 	
-	DrawNextBlock(next_block_.shape);
+	DrawNextBlock(next_block_->shape);
 
 
 	PrintScore(score);
@@ -133,7 +149,7 @@ int GetCommand(){
 int ProcessCommand(int command){
 	int ret=1;
 	bool can_move=0;
-	struct Block check_block=cur_block_;
+	struct Block check_block=*cur_block_;
 
 	switch(command){
 	case QUIT:
@@ -163,7 +179,7 @@ int ProcessCommand(int command){
 	can_move= CheckToMove(&check_block);
 
 	if(can_move==true){ 
-		DrawChange(&cur_block_,&check_block);
+		DrawChange(cur_block_,&check_block);
 	}
 
 	return ret;	
@@ -285,13 +301,13 @@ void play(){
 
 			return;
 		}
-		struct Block check_block=cur_block_;
+		struct Block check_block=*cur_block_;
 		check_block.y++;
 		bool can_move=CheckToMove(&check_block);
 
 
 		if(!can_move){
-			DrawBlock(&cur_block_,' ');
+			DrawBlock(cur_block_,' ');
 			Freeze();
 			int delta=BreakLine();
 			if(delta>0){
@@ -299,11 +315,20 @@ void play(){
 				score+=(delta*10);
 				PrintScore(score);
 			}
+	
+			list_remove(&cur_block_->elem);
+			free(cur_block_);
 
-			cur_block_=next_block_;
-			InitBlock(&next_block_);
-			gameOver=CheckGameOver(&cur_block_);
-			DrawNextBlock(next_block_.shape);
+			struct Block* blk;
+			InitBlock(&blk);
+			list_push_back(&b_list,&blk->elem);
+
+			cur_block_=list_entry(list_front(&b_list),struct Block,elem);
+			next_block_=list_entry(list_front(&b_list)->next,struct Block,elem);
+
+
+			gameOver=CheckGameOver(cur_block_);
+			DrawNextBlock(next_block_->shape);
 		}
 	}while(!gameOver);
 
@@ -313,7 +338,9 @@ void play(){
 	move(HEIGHT/2,WIDTH/2-4);
 	printw("GameOver!!");
 	refresh();
+
 	getch();
+	
 	NewRank(score);
 }
 
@@ -379,21 +406,29 @@ void BlockDown(int sig){
 
 	bool can_move;
 
-	struct Block check_block=cur_block_;
+	struct Block check_block=*cur_block_;
 	check_block.y++;
 	can_move=CheckToMove(&check_block);
 	if(!can_move){ 
 
 		Freeze();
 
-		gameOver=CheckGameOver(&cur_block_);
-		cur_block_=next_block_;
-		InitBlock(&next_block_);
-		DrawNextBlock(next_block_.shape);
+		gameOver=CheckGameOver(cur_block_);
+		
+		list_remove(&cur_block_->elem);
+		free(cur_block_);
+		cur_block_=list_entry(list_front(&b_list),struct Block,elem);
+		next_block_=list_entry(list_front(&b_list)->next,struct Block,elem);
+		struct Block* blk;
+		InitBlock(blk);
+		list_push_back(&b_list,&blk->elem);		
+		
+
+		DrawNextBlock(next_block_->shape);
 		return;
 	}else{
 
-		DrawChange(&cur_block_,&check_block);
+		DrawChange(cur_block_,&check_block);
 	}
 	timed_out=0;
 
@@ -427,27 +462,6 @@ void createRankList() {
 	FILE* fp;
 	int i, j;
 
-	//1. 파일 열기
-	// fp = fopen("rnak.txt", "r");
-
-	// 2. 정보읽어오기
-	/* int fscanf(FILE* stream, const char* format, ...);
-	stream:데이터를 읽어올 스트림의 FILE 객체를 가리키는 파일포인터
-	format: 형식지정자 등등
-	변수의 주소: 포인터
-	return: 성공할 경우, fscanf 함수는 읽어들인 데이터의 수를 리턴, 실패하면 EOF리턴 */
-	// EOF(End Of File): 실제로 이 값은 -1을 나타냄, EOF가 나타날때까지 입력받아오는 if문
-	// if (fscanf() != EOF) {
-
-
-
-
-	// }
-	// else {
-
-
-	// }
-	// 4. 파일닫기
 	fclose(fp);
 }
 
@@ -571,8 +585,8 @@ void Freeze(){
 
 	for(i=0;i<BLOCK_HEIGHT;i++){
 		for(j=0;j<BLOCK_WIDTH;j++){
-			if(block[cur_block_.shape][cur_block_.rotate][i][j]==1){
-				field[cur_block_.y+i][cur_block_.x+j]=1;
+			if(block[cur_block_->shape][cur_block_->rotate][i][j]==1){
+				field[cur_block_->y+i][cur_block_->x+j]=1;
 			}			
 		}
 	}
@@ -580,12 +594,14 @@ void Freeze(){
 
 
 
-void InitBlock(struct Block* blk){
-	blk->shape=rand()%7;
-	blk->rotate=0;
-	blk->x=WIDTH/2-2;
-	blk->y=-1;
-	blk->bid=block_id++;
+void InitBlock(struct Block** blk){
+	*blk=malloc(sizeof(struct Block));
+	assert(blk);
+	(*blk)->shape=rand()%7;
+	(*blk)->rotate=0;
+	(*blk)->x=WIDTH/2-2;
+	(*blk)->y=-1;
+	(*blk)->bid=block_id++;
 }
 
 int BreakLine(){

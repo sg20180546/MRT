@@ -25,7 +25,7 @@ struct list_elem* list_end(struct list* list){
 
 
 void list_push_back(struct list* list,struct list_elem* elem){
-
+    list_insert (list_end (list), elem);
 }
 
 struct list_elem* list_pop_front(struct list* list){
@@ -67,3 +67,7 @@ size_t list_size(struct list* list){
     }
     return cnt;
 }
+
+struct list_elem* list_front(struct list* list){
+  return list->head.next;
+}  

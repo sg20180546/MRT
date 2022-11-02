@@ -13,8 +13,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include "rank.h"
-
-
+#include "rec.h"
+#include <assert.h>
 #define WIDTH	10
 #define HEIGHT	22
 #define NOTHING	0
@@ -178,11 +178,12 @@ struct Block{
 	int y;
 	struct list_elem elem;
 };
-struct Block prev_block_;
-struct Block shadow_;
-struct Block cur_block_;
-struct Block next_block_;
 
+struct Block shadow_;
+struct Block* cur_block_;
+struct Block* next_block_;
+
+struct list b_list;
 
 int score;			/* 점수가 저장*/
 bool gameOver=false;			/* 게임이 종료되면 1로 setting된다.*/
@@ -396,5 +397,5 @@ bool CheckGameOver(struct Block* block);
 void Freeze();
 
 int BreakLine();
-void InitBlock(struct Block* blk);
+void InitBlock(struct Block** blk);
 #endif
