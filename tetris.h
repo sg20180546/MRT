@@ -15,6 +15,9 @@
 #include "rank.h"
 #include "rec.h"
 #include <assert.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <semaphore.h>
 #define WIDTH	10
 #define HEIGHT	22
 #define NOTHING	0
@@ -27,22 +30,73 @@
 
 #define KEY_SPACE ' '
 
-// menu number
 #define MENU_PLAY '1'
 #define MENU_RANK '2'
 #define MENU_RECM '3'
 #define MENU_EXIT '4'
 
-// 사용자 이름의 길이
 
 
+/* RECOMMONED */
+#define PTHREAD_N 4
 #define CHILDREN_MAX 36
+int t_count;
+sem_t worker_completed_mutex;
+bool recommend_mode=false;
+static int worker_completed;
 
+
+
+pthread_cond_t cond=PTHREAD_COND_INITIALIZER;
+sem_t global_mutex;
 typedef struct _RecNode{
 	int lv,score;
 	char (*f)[WIDTH];
 	struct _RecNode *c[CHILDREN_MAX];
 } RecNode;
+pid_t tid[PTHREAD_N];
+int thread_identifier=0;
+sem_t worker_mutex[PTHREAD_N];
+
+struct recommend_res{
+	int score;
+	int x;
+};
+
+struct recommend_res recommend_result[PTHREAD_N];
+struct range{
+    int min;
+    int max;
+};
+struct coor{
+	int x;
+	int y;
+};
+const struct range NumOfCase[NUM_OF_SHAPE][NUM_OF_ROTATE]={
+    {
+        {0,6},{-1,8},{0,6},{-1,8}
+    },
+    {
+        {-1,6},{-2,6},{-1,6},{-1,7}
+    },
+    {
+        {-1,6},{-2,6},{-1,6},{-1,7}
+    },
+    {
+        {0,7},{0,8},{0,7},{-1,7}
+    },
+    {
+        {-1,7},{-1,7},{-1,7},{-1,7}
+    },
+    {
+        {-1,-6},{-1,7},{-1,6},{-1,7}
+    },
+    {
+        {-1,6},{-1,7},{-1,6},{-1,7}
+    }
+};
+
+
 
 
 
@@ -150,6 +204,7 @@ const char block[NUM_OF_SHAPE][NUM_OF_ROTATE][BLOCK_HEIGHT][BLOCK_WIDTH] ={
 	}
 };
 
+
 /*
   
 (0,0)------------	
@@ -180,6 +235,7 @@ struct Block{
 };
 
 struct Block shadow_;
+struct Block rec_block_;
 struct Block* cur_block_;
 struct Block* next_block_;
 
@@ -288,15 +344,7 @@ void AddBlockToField(char f[HEIGHT][WIDTH],int currentBlock,int blockRotate, int
  *	input	: (char[][]) 완전히 채워진 line을 확인할 필드
  *	return	: (int) 삭제된 라인의 갯수에 대한 점수
  ***********************************************************/
-int DeleteLine(char f[HEIGHT][WIDTH]);
 
-/***********************************************************
- *	커서의 위치를 입력된 x, y의 위치로 옮겨주는 역할을 한다.
- *	input	: (int) 커서의 이동할 y 좌표
- *		  (int) 커서의 이동할 x 좌표
- *	return	: none
- ***********************************************************/
-void gotoyx(int y, int x);
 
 /***********************************************************
  *	테트리스의 화면 오른쪽상단에 다음 나올 블럭을 그려준다..
@@ -357,12 +405,8 @@ void play();
  ***********************************************************/
 char menu();
 
-/***********************************************************
- *	rank file로부터 랭킹 정보를 읽어와 랭킹 목록을 구성한다.
- *	input	: none
- *	return	: none
- ***********************************************************/
-void createRankList();
+
+
 
 /***********************************************************
  *	화면에 랭킹 기록들을 보여준다.
@@ -371,12 +415,6 @@ void createRankList();
  ***********************************************************/
 void rank();
 
-/***********************************************************
- *	rank file을 생성한다.
- *	input	: none
- *	return	: none
- ***********************************************************/
-void writeRankFile();
 
 
 /***********************************************************
@@ -398,4 +436,7 @@ void Freeze();
 
 int BreakLine();
 void InitBlock(struct Block** blk);
+
+int CalCulateScore(int shape,int rotate,int x,char ** cur_field,struct coor* coor);
+int RecursiveCalculateScore(struct list_elem* cur, char** cur_field);
 #endif

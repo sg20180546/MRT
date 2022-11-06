@@ -38,7 +38,11 @@ int main(){
 	curs_set(false);
 	srand((unsigned int)time(NULL));
 	list_init(&b_list);
+
+	InitRec();
+
 	while(!exit){
+		recommend_mode=false;
 		InitBlockList();
 		clear();
 		switch(menu()){
@@ -47,6 +51,10 @@ int main(){
 			break;
 		case MENU_RANK:
 			rank();
+			break;
+		case MENU_RECM:
+			recommend_mode=true;
+			play();
 			break;
 		case MENU_EXIT: 
 			exit=1; 
@@ -284,7 +292,37 @@ void play(){
 	sigaction(SIGALRM,&act,&oact);
 	// signal(SIGALRM,BlockDown);
 	InitTetris();
+	bool can_move=false;
 	do{
+		if(recommend_mode){
+			
+			if(!can_move){
+				// DeleteBlock(&rec_block_);
+				int i;
+				int index;
+				int score=INT32_MIN;
+				for(i=0;i<PTHREAD_N;i++){
+					sem_post(&worker_mutex[i]);
+				}
+
+				sem_wait(&global_mutex);
+				for(i=0;i<PTHREAD_N;i++){
+					if(recommend_result[i].score>score){
+						index=i;
+					}
+				}
+				DeleteBlock(cur_block_);
+				cur_block_->x=recommend_result[index].x;
+				rec_block_=*cur_block_;
+
+				while(CheckToMove(&rec_block_)){
+					rec_block_.y++;
+				}
+				rec_block_.y--;
+
+			}
+			DrawBlock(&rec_block_,'R');
+		}
 		if(timed_out==0){
 			alarm(1);
 			timed_out=1;
@@ -303,9 +341,9 @@ void play(){
 		}
 		struct Block check_block=*cur_block_;
 		check_block.y++;
-		bool can_move=CheckToMove(&check_block);
-
-
+		can_move=CheckToMove(&check_block);
+		
+		// printw("%d",CalCulateScore(check_block.shape,check_block.rotate,check_block.x,field));
 		if(!can_move){
 			DrawBlock(cur_block_,' ');
 			Freeze();
@@ -328,9 +366,15 @@ void play(){
 
 
 			gameOver=CheckGameOver(cur_block_);
+			if(gameOver){
+				break;
+			}
+
 			DrawNextBlock(next_block_->shape);
+
 		}
-	}while(!gameOver);
+
+	}while(1);
 
 	alarm(0);
 	getch();
@@ -434,36 +478,6 @@ void BlockDown(int sig){
 
 }
 
-void AddBlockToField(char f[HEIGHT][WIDTH],int currentBlock,int blockRotate, int blockY, int blockX){
-
-}
-
-int DeleteLine(char f[HEIGHT][WIDTH]){
-	// user code
-
-	//1. 필드를 탐색하여, 꽉 찬 구간이 있는지 탐색한다.
-	//2. 꽉 찬 구간이 있으면 해당 구간을 지운다. 즉, 해당 구간으로 필드값을 한칸씩 내린다.
-}
-
-///////////////////////////////////////////////////////////////////////////
-
-void DrawShadow(struct Block changed){
-
-
-}
-
-
-void createRankList() {
-	// 목적: Input파일인 "rank.txt"에서 랭킹 정보를 읽어들임, 읽어들인 정보로 랭킹 목록 생성
-	// 1. "rank.txt"열기
-	// 2. 파일에서 랭킹정보 읽어오기
-	// 3. LinkedList로 저장
-	// 4. 파일 닫기
-	FILE* fp;
-	int i, j;
-
-	fclose(fp);
-}
 
 void rank() {
 	//목적: rank 메뉴를 출력하고 점수 순으로 X부터~Y까지 출력함
@@ -541,43 +555,6 @@ void rank() {
 
 }
 
-void writeRankFile() {
-	// 목적: 추가된 랭킹 정보가 있으면 새로운 정보를 "rank.txt"에 쓰고 없으면 종료
-	int sn, i;
-	//1. "rank.txt" 연다
-	// FILE* fp = fopen("rank.txt", "r");
-
-	//2. 랭킹 정보들의 수를 "rank.txt"에 기록
-
-	//3. 탐색할 노드가 더 있는지 체크하고 있으면 다음 노드로 이동, 없으면 종료
-	// if (sn == score_number) return;
-	// else {
-
-
-	// }
-	// for (i = 1; i < score_number + 1; i++) {
-	// 	free(a.rank_name[i]);
-	// }
-	// free(a.rank_name);
-	// free(a.rank_score);
-}
-
-
-void DrawRecommend(int y, int x, int blockID,int blockRotate){
-	// user code
-}
-
-int recommend(RecNode *root){
-	int max=0; // 미리 보이는 블럭의 추천 배치까지 고려했을 때 얻을 수 있는 최대 점수
-
-	// user code
-
-	return max;
-}
-
-void recommendedPlay(){
-	// user code
-}
 
 void Freeze(){
 	int i;
@@ -627,4 +604,171 @@ int BreakLine(){
 	}
 
 	return delta;
+}
+
+
+
+// thread 1:
+//     pthread_mutex_lock(&mutex);
+//     while (!condition)
+//         pthread_cond_wait(&cond, &mutex);
+//     /* do something that requires holding the mutex and condition is true */
+//     pthread_mutex_unlock(&mutex);
+
+// thread2:
+//     pthread_mutex_lock(&mutex);
+//     /* do something that might make condition true */
+//     pthread_cond_signal(&cond);
+//     pthread_mutex_unlock(&mutex);
+
+void worker(void * arg){
+
+	sem_wait(&worker_completed_mutex);
+    int identifier=thread_identifier%PTHREAD_N;
+	thread_identifier++;
+	sem_post(&worker_completed_mutex);
+    // pthread_cond_wait(),
+    char cur_field[HEIGHT][WIDTH];
+    
+    while(1){
+        // calculation
+		// pthread_cond_wait(&cond,NULL);
+		sem_wait(&worker_mutex[identifier]);
+		int score=0;
+        int i;
+		int j;
+		int result_x;
+		struct coor candidate[16];
+
+        struct Block* first=list_entry(list_front(&b_list),struct Block,elem);
+
+        struct range* range=&NumOfCase[first->shape][identifier];
+		
+        // calculate with field
+
+        for(i=range->min;i<range->max;i++){
+			struct coor coor[16];
+            int res=CalCulateScore(first->shape,identifier,i,cur_field,coor);
+			memcpy(candidate,coor,sizeof(struct coor)*16);
+        	memcpy(cur_field,field,sizeof field);
+
+			for(j=0;j<BLOCK_HEIGHT*BLOCK_WIDTH;j++){
+				cur_field[candidate[j].y][candidate[j].x]=1;
+			}	
+			res+=RecursiveCalculateScore(first->elem.next,cur_field);
+			
+			if(res>=score){
+				score=res;
+				result_x=i;
+			}
+		}
+
+
+
+
+
+
+        sem_wait(&worker_completed_mutex);
+		recommend_result[identifier].score=score;
+		recommend_result[identifier].x=result_x;
+        worker_completed++;
+        sem_post(&worker_completed_mutex);
+        if(worker_completed==4){
+            sem_post(&global_mutex);
+        }
+        
+    }
+}
+
+void InitRec(){
+    int i;
+    t_count=0;
+    worker_completed=0;
+    sem_init(&global_mutex,0,0);
+    sem_init(&worker_completed_mutex,0,1);
+    // root=malloc(sizeof* malloc);
+    // sem_init(&root->recnode_mutex,0,1);
+    for(i=0;i<PTHREAD_N;i++){
+		sem_init(&worker_mutex[i],0,0);
+    }
+    for(i=0;i<PTHREAD_N;i++){
+        pthread_create(&tid[i],NULL,worker,NULL);
+    }
+    // for(i=0;i<PTHREAD_N-1;i++){
+    //     assert(tid[i]+1==tid[i+1]);
+    // }
+}
+
+int dx[]={-1,0,1};
+int dy[]={0,1,0};
+
+int CalCulateScore(int shape,int rotate,int x,char ** cur_field,struct coor* coor){
+    struct Block check_block;
+	int i;
+	int j;
+	int fill=0;
+    check_block.shape=shape;
+    check_block.rotate=rotate;
+    check_block.x=x;
+    check_block.y=-1;
+    while (CheckToMove(&check_block))
+    {
+        check_block.y++;
+    }
+	check_block.y--;
+    int score=0;
+	for(i=0;i<BLOCK_HEIGHT;i++){
+		for(j=0;j<BLOCK_WIDTH;j++){
+			if(block[shape][rotate][i][j]==1){
+				int cx=check_block.x+j;
+				int cy=check_block.y+i;
+				coor[fill].x=cx;
+
+				coor[fill].y=cy;
+				fill++;
+				int k;
+				for(k=0;k<3;k++){
+					int nx=dx[k]+cx;
+					int ny=dy[k]+cy;
+					if(ny>=HEIGHT ||nx<0 || nx>=WIDTH || field[ny][nx]==1){
+						score++;
+					}
+
+				}
+			}
+		}
+    
+	}
+	return score;
+}
+
+int RecursiveCalculateScore(struct list_elem* cur, char** cur_field){
+	if(cur==list_end(&b_list)){
+		return 0;
+	}
+	struct Block* blk=list_entry(cur,struct Block,elem);
+	char new_field[HEIGHT][WIDTH];
+	struct coor candidate[16];
+	int i;
+	int j;
+	int k;
+	int ret=INT32_MIN;
+	for(i=0;i<NUM_OF_ROTATE;i++){ // i= rotate
+		struct range range=NumOfCase[blk->shape][i];
+		for(j=range.min;j<range.max;j++){ // j = x
+			int res=0;
+			memcpy(new_field,cur_field,sizeof new_field);
+			
+			res=CalCulateScore(blk->shape,i,j,new_field,candidate);
+			
+			for(k=0;k<4;k++){ // 4 : 4/16,filled
+ 				new_field[candidate[k].y][candidate[k].x]=1;
+			}
+			res+=RecursiveCalculateScore(cur->next,new_field);	
+			if(res>ret){
+				ret=res;
+			}
+		}
+	}
+	return ret;
 }
