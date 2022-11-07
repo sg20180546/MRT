@@ -54,7 +54,7 @@ typedef struct _RecNode{
 	char (*f)[WIDTH];
 	struct _RecNode *c[CHILDREN_MAX];
 } RecNode;
-pid_t tid[PTHREAD_N];
+pthread_t tid[PTHREAD_N];
 int thread_identifier=0;
 sem_t worker_mutex[PTHREAD_N];
 
@@ -437,6 +437,6 @@ void Freeze();
 int BreakLine();
 void InitBlock(struct Block** blk);
 
-int CalCulateScore(int shape,int rotate,int x,char ** cur_field,struct coor* coor);
+int CalCulateScore(int shape,int rotate,int x,char cur_field[HEIGHT][WIDTH],struct coor* coor);
 int RecursiveCalculateScore(struct list_elem* cur, char** cur_field);
 #endif

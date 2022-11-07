@@ -54,6 +54,7 @@ int main(){
 			break;
 		case MENU_RECM:
 			recommend_mode=true;
+			InitRec();
 			play();
 			break;
 		case MENU_EXIT: 
@@ -294,6 +295,7 @@ void play(){
 	InitTetris();
 	bool can_move=false;
 	do{
+
 		if(recommend_mode){
 			
 			if(!can_move){
@@ -313,6 +315,7 @@ void play(){
 				}
 				DeleteBlock(cur_block_);
 				cur_block_->x=recommend_result[index].x;
+				cur_block_->rotate=index;
 				rec_block_=*cur_block_;
 
 				while(CheckToMove(&rec_block_)){
@@ -322,6 +325,7 @@ void play(){
 
 			}
 			DrawBlock(&rec_block_,'R');
+			refresh();
 		}
 		if(timed_out==0){
 			alarm(1);
@@ -330,6 +334,10 @@ void play(){
 		// DeleteBlock(&shadow_);
 		command = GetCommand();
 		if(ProcessCommand(command)==QUIT){
+			int i;
+			for(i=0;i<PTHREAD_N;i++){
+				pthread_cancel((pthread_t)tid[i]);
+			}
 			alarm(0);
 			DrawBox(HEIGHT/2-1,WIDTH/2-5,1,10);
 			move(HEIGHT/2,WIDTH/2-4);
@@ -622,7 +630,7 @@ int BreakLine(){
 //     pthread_mutex_unlock(&mutex);
 
 void worker(void * arg){
-
+	pthread_detach(pthread_self());
 	sem_wait(&worker_completed_mutex);
     int identifier=thread_identifier%PTHREAD_N;
 	thread_identifier++;
@@ -645,24 +653,41 @@ void worker(void * arg){
         struct range* range=&NumOfCase[first->shape][identifier];
 		
         // calculate with field
+		if(first->bid%2){
+			for(i=range->min;i<=range->max;i++){
+				struct coor coor[16];
+				int res=CalCulateScore(first->shape,identifier,i,cur_field,coor);
+				memcpy(candidate,coor,sizeof(struct coor)*16);
+				memcpy(cur_field,field,sizeof field);
 
-        for(i=range->min;i<range->max;i++){
-			struct coor coor[16];
-            int res=CalCulateScore(first->shape,identifier,i,cur_field,coor);
-			memcpy(candidate,coor,sizeof(struct coor)*16);
-        	memcpy(cur_field,field,sizeof field);
+				for(j=0;j<BLOCK_HEIGHT*BLOCK_WIDTH;j++){
+					cur_field[candidate[j].y][candidate[j].x]=1;
+				}	
+				res+=RecursiveCalculateScore(first->elem.next,cur_field);
+				
+				if(res>=score){
+					score=res;
+					result_x=i;
+				}
+			}
+		}else{
+			for(i=range->max;i>=range->min;i--){
+				struct coor coor[16];
+				int res=CalCulateScore(first->shape,identifier,i,cur_field,coor);
+				memcpy(candidate,coor,sizeof(struct coor)*16);
+				memcpy(cur_field,field,sizeof field);
 
-			for(j=0;j<BLOCK_HEIGHT*BLOCK_WIDTH;j++){
-				cur_field[candidate[j].y][candidate[j].x]=1;
-			}	
-			res+=RecursiveCalculateScore(first->elem.next,cur_field);
-			
-			if(res>=score){
-				score=res;
-				result_x=i;
+				for(j=0;j<BLOCK_HEIGHT*BLOCK_WIDTH;j++){
+					cur_field[candidate[j].y][candidate[j].x]=1;
+				}	
+				res+=RecursiveCalculateScore(first->elem.next,cur_field);
+				
+				if(res>=score){
+					score=res;
+					result_x=i;
+				}
 			}
 		}
-
 
 
 
@@ -699,10 +724,10 @@ void InitRec(){
     // }
 }
 
-int dx[]={-1,0,1};
-int dy[]={0,1,0};
+int dx[]={-1,1};
+int dy[]={0,0};
 
-int CalCulateScore(int shape,int rotate,int x,char ** cur_field,struct coor* coor){
+int CalCulateScore(int shape,int rotate,int x,char cur_field[HEIGHT][WIDTH],struct coor* coor){
     struct Block check_block;
 	int i;
 	int j;
@@ -727,13 +752,18 @@ int CalCulateScore(int shape,int rotate,int x,char ** cur_field,struct coor* coo
 				coor[fill].y=cy;
 				fill++;
 				int k;
-				for(k=0;k<3;k++){
+				for(k=0;k<2;k++){
 					int nx=dx[k]+cx;
 					int ny=dy[k]+cy;
-					if(ny>=HEIGHT ||nx<0 || nx>=WIDTH || field[ny][nx]==1){
+
+					if(ny>=HEIGHT ||nx<0 || nx>=WIDTH||cur_field[ny][nx]==1){
 						score++;
 					}
 
+				}
+				cy++;
+				if(cy<=HEIGHT&&cur_field[cy][cx]==0){
+					score-=5;
 				}
 			}
 		}
