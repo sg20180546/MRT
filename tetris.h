@@ -13,7 +13,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include "rank.h"
-#include "rec.h"
+
+#include <setjmp.h>
 #include <assert.h>
 #include <pthread.h>
 #include <unistd.h>
@@ -38,8 +39,10 @@
 
 
 /* RECOMMONED */
+int REC_CAL=2;
 #define PTHREAD_N 4
 #define CHILDREN_MAX 36
+jmp_buf jbuf;
 int t_count;
 sem_t worker_completed_mutex;
 bool recommend_mode=false;
@@ -432,11 +435,12 @@ int recommend(RecNode *root);
 void recommendedPlay();
 
 bool CheckGameOver(struct Block* block);
-void Freeze();
+void Freeze(char f[HEIGHT][WIDTH],struct Block* blk);
 
-int BreakLine();
+int BreakLine(char f[HEIGHT][WIDTH]);
 void InitBlock(struct Block** blk);
 
 int CalCulateScore(int shape,int rotate,int x,char cur_field[HEIGHT][WIDTH],struct coor* coor);
-int RecursiveCalculateScore(struct list_elem* cur, char** cur_field);
+int RecursiveCalculateScore(struct list_elem* cur, char cur_field[HEIGHT][WIDTH]);
+void RecommendNextBlock(void);
 #endif

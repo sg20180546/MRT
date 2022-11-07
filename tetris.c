@@ -26,9 +26,12 @@ void rs(){
 	sleep(2);
 }
 
-int main(){
+int main(int argc,char** argv){
 	int exit=0;
 	
+	if(argc==2){
+		REC_CAL=atoi(argv[1]);
+	}
 	InitRank();
 	list_init(&b_list);
 
@@ -74,6 +77,7 @@ bool CheckGameOver(struct Block* blk){
 	for(i=0;i<BLOCK_HEIGHT;i++){
 		for(j=0;j<BLOCK_WIDTH;j++){
 			if(block[blk->shape][blk->rotate][i][j]==1){
+				
 				if(field[blk->y + i][blk->x+j]==1){
 					return true;
 				}
@@ -253,10 +257,11 @@ void DeleteBlock(struct Block* blk){
 	for(i=0;i<BLOCK_HEIGHT;i++)
 		for(j=0;j<BLOCK_WIDTH;j++){
 			if(block[blk->shape][blk->rotate][i][j]==true && i+blk->y>=0){
+				if(field[i+blk->y][j+blk->x]==0){
 				move(i+blk->y+1,j+blk->x+1);
-
+				
 				printw("%c",'.');
-
+				}
 			}
 		}
 
@@ -299,33 +304,35 @@ void play(){
 		if(recommend_mode){
 			
 			if(!can_move){
-				// DeleteBlock(&rec_block_);
-				int i;
-				int index;
-				int score=INT32_MIN;
-				for(i=0;i<PTHREAD_N;i++){
-					sem_post(&worker_mutex[i]);
-				}
+				// setjmp(&jbuf);
+				RecommendNextBlock();
+				// int i;
+				// int index;
+				// int score=INT32_MIN;
+				// for(i=0;i<PTHREAD_N;i++){
+				// 	sem_post(&worker_mutex[i]);
+				// }
 
-				sem_wait(&global_mutex);
-				for(i=0;i<PTHREAD_N;i++){
-					if(recommend_result[i].score>score){
-						index=i;
-					}
-				}
-				DeleteBlock(cur_block_);
-				cur_block_->x=recommend_result[index].x;
-				cur_block_->rotate=index;
-				rec_block_=*cur_block_;
+				// sem_wait(&global_mutex);
+				// for(i=0;i<PTHREAD_N;i++){
+				// 	if(recommend_result[i].score>score){
+				// 		index=i;
+				// 		score=recommend_result[i].score;
+				// 	}
+				// }
+				// DeleteBlock(cur_block_);
+				// cur_block_->x=recommend_result[index].x;
+				// cur_block_->rotate=index;
+				// rec_block_=*cur_block_;
 
-				while(CheckToMove(&rec_block_)){
-					rec_block_.y++;
-				}
-				rec_block_.y--;
-
+				// while(CheckToMove(&rec_block_)){
+				// 	rec_block_.y++;
+				// }
+				// rec_block_.y--;
+				// move(50,50);
+				// printw("%d",score);
 			}
 			DrawBlock(&rec_block_,'R');
-			refresh();
 		}
 		if(timed_out==0){
 			alarm(1);
@@ -354,8 +361,8 @@ void play(){
 		// printw("%d",CalCulateScore(check_block.shape,check_block.rotate,check_block.x,field));
 		if(!can_move){
 			DrawBlock(cur_block_,' ');
-			Freeze();
-			int delta=BreakLine();
+			Freeze(field,cur_block_);
+			int delta=BreakLine(field);
 			if(delta>0){
 				DrawField();
 				score+=(delta*10);
@@ -399,7 +406,7 @@ void play(){
 char menu(){
 	printw("1. play\n");
 	printw("2. rank\n");
-	printw("3. recommended play\n");
+	printw("3. recommended play (REC_CAL:%d)\n",REC_CAL);
 	printw("4. exit\n");
 	return wgetch(stdscr);
 }
@@ -430,6 +437,7 @@ bool CheckToMove(struct Block* check_block){
 			}
 		}
 	}
+
 	return true;
 }
 
@@ -455,25 +463,30 @@ void DrawChange(struct Block* prev_block,struct Block* new_block){
 }
 void BlockDown(int sig){
 
-
+	timed_out=0;
 	bool can_move;
 
 	struct Block check_block=*cur_block_;
 	check_block.y++;
+
 	can_move=CheckToMove(&check_block);
+
 	if(!can_move){ 
 
-		Freeze();
+		Freeze(field,cur_block_);
 
 		gameOver=CheckGameOver(cur_block_);
 		
 		list_remove(&cur_block_->elem);
 		free(cur_block_);
+		struct Block* blk;
+		InitBlock(&blk);
+		list_push_back(&b_list,&blk->elem);	
 		cur_block_=list_entry(list_front(&b_list),struct Block,elem);
 		next_block_=list_entry(list_front(&b_list)->next,struct Block,elem);
-		struct Block* blk;
-		InitBlock(blk);
-		list_push_back(&b_list,&blk->elem);		
+		
+
+
 		
 
 		DrawNextBlock(next_block_->shape);
@@ -482,7 +495,7 @@ void BlockDown(int sig){
 
 		DrawChange(cur_block_,&check_block);
 	}
-	timed_out=0;
+
 
 }
 
@@ -564,14 +577,15 @@ void rank() {
 }
 
 
-void Freeze(){
+void Freeze(char f[HEIGHT][WIDTH],struct Block* blk){
+	move(50,50);
 	int i;
 	int j;
 
 	for(i=0;i<BLOCK_HEIGHT;i++){
 		for(j=0;j<BLOCK_WIDTH;j++){
-			if(block[cur_block_->shape][cur_block_->rotate][i][j]==1){
-				field[cur_block_->y+i][cur_block_->x+j]=1;
+			if(block[blk->shape][blk->rotate][i][j]==1){
+				f[blk->y+i][blk->x+j]=1;
 			}			
 		}
 	}
@@ -589,7 +603,7 @@ void InitBlock(struct Block** blk){
 	(*blk)->bid=block_id++;
 }
 
-int BreakLine(){
+int BreakLine(char f[HEIGHT][WIDTH]){
 	int i;
 	int j;
 	int delta=0;
@@ -597,7 +611,7 @@ int BreakLine(){
 		bool can_break=true;
 
 		for(j=0;j<WIDTH-1;j+=2){
-			if(!field[i][j] || !field[i][j+1]){
+			if(!f[i][j] || !f[i][j+1]){
 				// 0,1 / 2,3 / 4,5 / 6,7 / 8,9 
 				can_break=false;
 			}
@@ -605,7 +619,7 @@ int BreakLine(){
 
 		if(can_break){
 			// bf();
-			memcpy(field[1],field[0],sizeof(char)*WIDTH*(i));
+			memcpy(f[1],f[0],sizeof(char)*WIDTH*(i));
 			delta++;
 			i++;
 		}
@@ -653,14 +667,17 @@ void worker(void * arg){
         struct range* range=&NumOfCase[first->shape][identifier];
 		
         // calculate with field
-		if(first->bid%2){
+		// if(1){
 			for(i=range->min;i<=range->max;i++){
-				struct coor coor[16];
+				struct coor coor[4];
 				int res=CalCulateScore(first->shape,identifier,i,cur_field,coor);
-				memcpy(candidate,coor,sizeof(struct coor)*16);
+				memcpy(candidate,coor,sizeof(struct coor)*4);
 				memcpy(cur_field,field,sizeof field);
 
-				for(j=0;j<BLOCK_HEIGHT*BLOCK_WIDTH;j++){
+				for(j=0;j<4;j++){
+					// if(candidate[j].y<0||candidate[j].x<0){
+					// 	continue;
+					// }
 					cur_field[candidate[j].y][candidate[j].x]=1;
 				}	
 				res+=RecursiveCalculateScore(first->elem.next,cur_field);
@@ -670,24 +687,25 @@ void worker(void * arg){
 					result_x=i;
 				}
 			}
-		}else{
-			for(i=range->max;i>=range->min;i--){
-				struct coor coor[16];
-				int res=CalCulateScore(first->shape,identifier,i,cur_field,coor);
-				memcpy(candidate,coor,sizeof(struct coor)*16);
-				memcpy(cur_field,field,sizeof field);
+		// }
+		// else{
+		// 	for(i=range->max;i>=range->min;i--){
+		// 		struct coor coor[16];
+		// 		int res=CalCulateScore(first->shape,identifier,i,cur_field,coor);
+		// 		memcpy(candidate,coor,sizeof(struct coor)*16);
+		// 		memcpy(cur_field,field,sizeof field);
 
-				for(j=0;j<BLOCK_HEIGHT*BLOCK_WIDTH;j++){
-					cur_field[candidate[j].y][candidate[j].x]=1;
-				}	
-				res+=RecursiveCalculateScore(first->elem.next,cur_field);
+		// 		for(j=0;j<4;j++){
+		// 			cur_field[candidate[j].y][candidate[j].x]=1;
+		// 		}	
+		// 		res+=RecursiveCalculateScore(first->elem.next,cur_field);
 				
-				if(res>=score){
-					score=res;
-					result_x=i;
-				}
-			}
-		}
+		// 		if(res>=score){
+		// 			score=res;
+		// 			result_x=i;
+		// 		}
+		// 	}
+		// }
 
 
 
@@ -699,6 +717,7 @@ void worker(void * arg){
         worker_completed++;
         sem_post(&worker_completed_mutex);
         if(worker_completed==4){
+			worker_completed=0;
             sem_post(&global_mutex);
         }
         
@@ -724,8 +743,8 @@ void InitRec(){
     // }
 }
 
-int dx[]={-1,1};
-int dy[]={0,0};
+int dx[]={-1,1,0};
+int dy[]={0,0,1};
 
 int CalCulateScore(int shape,int rotate,int x,char cur_field[HEIGHT][WIDTH],struct coor* coor){
     struct Block check_block;
@@ -742,37 +761,65 @@ int CalCulateScore(int shape,int rotate,int x,char cur_field[HEIGHT][WIDTH],stru
     }
 	check_block.y--;
     int score=0;
+	int lowy=0;
+	char new_field[HEIGHT][WIDTH];
+	memcpy(new_field,cur_field,sizeof field);
 	for(i=0;i<BLOCK_HEIGHT;i++){
 		for(j=0;j<BLOCK_WIDTH;j++){
 			if(block[shape][rotate][i][j]==1){
 				int cx=check_block.x+j;
 				int cy=check_block.y+i;
 				coor[fill].x=cx;
-
 				coor[fill].y=cy;
 				fill++;
 				int k;
-				for(k=0;k<2;k++){
+				for(k=0;k<3;k++){
 					int nx=dx[k]+cx;
 					int ny=dy[k]+cy;
 
-					if(ny>=HEIGHT ||nx<0 || nx>=WIDTH||cur_field[ny][nx]==1){
-						score++;
+					if(ny>=HEIGHT ||nx<0 || nx>=WIDTH || cur_field[ny][nx]==1){
+						// if(ny>=HEIGHT){
+						// 	score++;
+						// }
+						// if(nx<0||nx>=WIDTH){
+						// 	score++;
+						// }
+						score+=150;
+
 					}
+					// if(ny<HEIGHT&&nx>=0&& nx<WIDTH){
+					// 	if(cur_field[ny][nx]==1){
+					// 		score++;
+					// 	}
+					// }
 
 				}
-				cy++;
-				if(cy<=HEIGHT&&cur_field[cy][cx]==0){
-					score-=5;
+				// if(cy>lowy){
+				// 	lowy=cy;
+				// }
+				score+=cy*280;
+				if(cy+1<HEIGHT&&cur_field[cy+1][cx]==0){
+					// score=-10;
 				}
+
 			}
 		}
     
 	}
+	// score+=100*lowy;
+	Freeze(new_field,&check_block);
+
+	
+	int delta=BreakLine(new_field)*1000;
+	score+=delta;
+	// if(delta){
+	// 	move(50,40);
+	// 	printw("%d // %d",check_block.x,delta);
+	// }
 	return score;
 }
 
-int RecursiveCalculateScore(struct list_elem* cur, char** cur_field){
+int RecursiveCalculateScore(struct list_elem* cur, char cur_field[HEIGHT][WIDTH]){
 	if(cur==list_end(&b_list)){
 		return 0;
 	}
@@ -783,11 +830,12 @@ int RecursiveCalculateScore(struct list_elem* cur, char** cur_field){
 	int j;
 	int k;
 	int ret=INT32_MIN;
+
+	memcpy(new_field,cur_field,sizeof new_field);
 	for(i=0;i<NUM_OF_ROTATE;i++){ // i= rotate
 		struct range range=NumOfCase[blk->shape][i];
-		for(j=range.min;j<range.max;j++){ // j = x
+		for(j=range.min;j<=range.max;j++){ // j = x
 			int res=0;
-			memcpy(new_field,cur_field,sizeof new_field);
 			
 			res=CalCulateScore(blk->shape,i,j,new_field,candidate);
 			
@@ -798,7 +846,39 @@ int RecursiveCalculateScore(struct list_elem* cur, char** cur_field){
 			if(res>ret){
 				ret=res;
 			}
+			for(k=0;k<4;k++){ // 4 : 4/16,filled
+ 				new_field[candidate[k].y][candidate[k].x]=0;
+			}
 		}
 	}
 	return ret;
+}
+
+void RecommendNextBlock(void){
+	int i;
+	int j;
+	int index;
+	int score=INT32_MIN;
+	for(i=0;i<PTHREAD_N;i++){
+		sem_post(&worker_mutex[i]);
+	}
+	sem_wait(&global_mutex);
+	for(i=0;i<PTHREAD_N;i++){
+		if(recommend_result[i].score>=score){
+			index=i;
+			score=recommend_result[i].score;
+		}
+	}
+	DeleteBlock(&rec_block_);
+	
+	DeleteBlock(cur_block_);
+	cur_block_->x=recommend_result[index].x;
+	cur_block_->rotate=index;
+	rec_block_=*cur_block_;
+	while(CheckToMove(&rec_block_)){
+		rec_block_.y++;
+	}
+	rec_block_.y--;
+	// move(50,50);
+	// printw("%d",score);
 }
