@@ -75,6 +75,12 @@ struct coor{
 	int x;
 	int y;
 };
+
+struct RecursiveRet{
+	int score;
+	int x;
+	int rotate;
+};
 const struct range NumOfCase[NUM_OF_SHAPE][NUM_OF_ROTATE]={
     {
         {0,6},{-1,8},{0,6},{-1,8}
@@ -309,7 +315,7 @@ void BlockDown(int sig);
  *	return	: (int) 입력에 대한 블럭 움직임이 가능하면 1
  *		  가능하지 않으면 0을 return 한다.
  ***********************************************************/
-bool CheckToMove(struct Block* check_block);
+bool CheckToMove(struct Block* check_block,char f[HEIGHT][WIDTH]);
 
 /***********************************************************
  *	테트리스에서 command에 의해 바뀐 부분만 다시 그려준다.
@@ -440,7 +446,7 @@ void Freeze(char f[HEIGHT][WIDTH],struct Block* blk);
 int BreakLine(char f[HEIGHT][WIDTH]);
 void InitBlock(struct Block** blk);
 
-int CalCulateScore(int shape,int rotate,int x,char cur_field[HEIGHT][WIDTH],struct coor* coor);
-int RecursiveCalculateScore(struct list_elem* cur, char cur_field[HEIGHT][WIDTH]);
+int CalCulateScore(int shape,int rotate,int x,char cur_field[HEIGHT][WIDTH]);
+struct RecursiveRet RecursiveCalculateScore(struct list_elem* cur, char cur_field[HEIGHT][WIDTH]);
 void RecommendNextBlock(void);
 #endif

@@ -42,7 +42,7 @@ int main(int argc,char** argv){
 	srand((unsigned int)time(NULL));
 	list_init(&b_list);
 
-	InitRec();
+	// InitRec();
 
 	while(!exit){
 		recommend_mode=false;
@@ -57,7 +57,7 @@ int main(int argc,char** argv){
 			break;
 		case MENU_RECM:
 			recommend_mode=true;
-			InitRec();
+			// InitRec();
 			play();
 			break;
 		case MENU_EXIT: 
@@ -181,7 +181,7 @@ int ProcessCommand(int command){
 		check_block.x--;
 		break;
 	case KEY_SPACE:
-		while(CheckToMove(&check_block)){
+		while(CheckToMove(&check_block,field)){
 			check_block.y++;
 		}
 		check_block.y--;
@@ -189,7 +189,7 @@ int ProcessCommand(int command){
 	default:
 		break;
 	}
-	can_move= CheckToMove(&check_block);
+	can_move= CheckToMove(&check_block,field);
 
 	if(can_move==true){ 
 		DrawChange(cur_block_,&check_block);
@@ -295,6 +295,7 @@ void play(){
 	int command;
 	clear();
 	act.sa_handler = BlockDown;
+	// act.sa_handler=bf;
 	sigaction(SIGALRM,&act,&oact);
 	// signal(SIGALRM,BlockDown);
 	InitTetris();
@@ -305,13 +306,38 @@ void play(){
 			
 			if(!can_move){
 				// setjmp(&jbuf);
-				RecommendNextBlock();
+				// RecommendNextBlock();
 				// int i;
 				// int index;
 				// int score=INT32_MIN;
 				// for(i=0;i<PTHREAD_N;i++){
 				// 	sem_post(&worker_mutex[i]);
 				// }
+				
+				DeleteBlock(&cur_block_);
+				DeleteBlock(&rec_block_);
+				struct RecursiveRet rr;
+
+				// assert(cur_block_->rotate<4&&cur_block_->rotate>=0);
+				// while(1){
+					rr=RecursiveCalculateScore(list_front(&b_list),field);
+					if(!(rr.rotate<4&&rr.rotate>=0)){
+						move(50,50);
+						printw("%d %d",rr.rotate,rr.x);
+						// exit(0);
+						rr.rotate=rand()%NUM_OF_ROTATE;
+					}
+				// }
+				cur_block_->x=rr.x;
+				cur_block_->rotate=rr.rotate;
+				
+				rec_block_=*cur_block_;
+				while(CheckToMove(&rec_block_,field)){
+					rec_block_.y++;
+				}
+				rec_block_.y--;
+				// move(50,50);
+				// printw("%d",rr.score);
 
 				// sem_wait(&global_mutex);
 				// for(i=0;i<PTHREAD_N;i++){
@@ -333,6 +359,7 @@ void play(){
 				// printw("%d",score);
 			}
 			DrawBlock(&rec_block_,'R');
+
 		}
 		if(timed_out==0){
 			alarm(1);
@@ -356,8 +383,9 @@ void play(){
 		}
 		struct Block check_block=*cur_block_;
 		check_block.y++;
-		can_move=CheckToMove(&check_block);
-		
+		can_move=CheckToMove(&check_block,field);
+		move(50,50);
+		printw("%d",cur_block_->x);
 		// printw("%d",CalCulateScore(check_block.shape,check_block.rotate,check_block.x,field));
 		if(!can_move){
 			DrawBlock(cur_block_,' ');
@@ -413,7 +441,7 @@ char menu(){
 
 /////////////////////////첫주차 실습에서 구현해야 할 함수/////////////////////////
 
-bool CheckToMove(struct Block* check_block){
+bool CheckToMove(struct Block* check_block,char f[HEIGHT][WIDTH]){
 
 	int i;
 	int j;
@@ -427,7 +455,7 @@ bool CheckToMove(struct Block* check_block){
 					return false;
 				}
 
-				if(field[check_block->y+i][check_block->x+j]==1){
+				if(f[check_block->y+i][check_block->x+j]==1){
 					return false;	
 				}
 				if(check_block->x+j<0 || check_block->x+j>=WIDTH){
@@ -452,7 +480,7 @@ void DrawChange(struct Block* prev_block,struct Block* new_block){
 	DrawBlock(new_block,' ');
 
 	shadow_=*new_block;
-	while(CheckToMove(&shadow_)){
+	while(CheckToMove(&shadow_,field)){
 		shadow_.y++;
 	}
 	shadow_.y--;
@@ -466,10 +494,22 @@ void BlockDown(int sig){
 	timed_out=0;
 	bool can_move;
 
+
+
 	struct Block check_block=*cur_block_;
 	check_block.y++;
 
-	can_move=CheckToMove(&check_block);
+	can_move=CheckToMove(&check_block,field);
+
+	if(recommend_mode){
+		while (CheckToMove(&check_block,field))
+		{
+			check_block.y++;
+		}
+		check_block.y--;
+		// DeleteBlock(cur_block_);
+		
+	}
 
 	if(!can_move){ 
 
@@ -478,7 +518,10 @@ void BlockDown(int sig){
 		gameOver=CheckGameOver(cur_block_);
 		
 		list_remove(&cur_block_->elem);
+		
+
 		free(cur_block_);
+		
 		struct Block* blk;
 		InitBlock(&blk);
 		list_push_back(&b_list,&blk->elem);	
@@ -597,6 +640,7 @@ void InitBlock(struct Block** blk){
 	*blk=malloc(sizeof(struct Block));
 	assert(blk);
 	(*blk)->shape=rand()%7;
+	// (*blk)->shape=6;
 	(*blk)->rotate=0;
 	(*blk)->x=WIDTH/2-2;
 	(*blk)->y=-1;
@@ -670,7 +714,7 @@ void worker(void * arg){
 		// if(1){
 			for(i=range->min;i<=range->max;i++){
 				struct coor coor[4];
-				int res=CalCulateScore(first->shape,identifier,i,cur_field,coor);
+				int res=CalCulateScore(first->shape,identifier,i,cur_field);
 				memcpy(candidate,coor,sizeof(struct coor)*4);
 				memcpy(cur_field,field,sizeof field);
 
@@ -680,7 +724,7 @@ void worker(void * arg){
 					// }
 					cur_field[candidate[j].y][candidate[j].x]=1;
 				}	
-				res+=RecursiveCalculateScore(first->elem.next,cur_field);
+				// res+=RecursiveCalculateScore(first->elem.next,cur_field);
 				
 				if(res>=score){
 					score=res;
@@ -746,109 +790,73 @@ void InitRec(){
 int dx[]={-1,1,0};
 int dy[]={0,0,1};
 
-int CalCulateScore(int shape,int rotate,int x,char cur_field[HEIGHT][WIDTH],struct coor* coor){
+int CalCulateScore(int shape,int rotate,int x,char cur_field[HEIGHT][WIDTH]){
     struct Block check_block;
 	int i;
 	int j;
-	int fill=0;
+	int ret;
+
     check_block.shape=shape;
     check_block.rotate=rotate;
     check_block.x=x;
     check_block.y=-1;
-    while (CheckToMove(&check_block))
+    while (CheckToMove(&check_block,cur_field))
     {
         check_block.y++;
     }
 	check_block.y--;
-    int score=0;
-	int lowy=0;
-	char new_field[HEIGHT][WIDTH];
-	memcpy(new_field,cur_field,sizeof field);
-	for(i=0;i<BLOCK_HEIGHT;i++){
-		for(j=0;j<BLOCK_WIDTH;j++){
-			if(block[shape][rotate][i][j]==1){
-				int cx=check_block.x+j;
-				int cy=check_block.y+i;
-				coor[fill].x=cx;
-				coor[fill].y=cy;
-				fill++;
-				int k;
-				for(k=0;k<3;k++){
-					int nx=dx[k]+cx;
-					int ny=dy[k]+cy;
 
-					if(ny>=HEIGHT ||nx<0 || nx>=WIDTH || cur_field[ny][nx]==1){
-						// if(ny>=HEIGHT){
-						// 	score++;
-						// }
-						// if(nx<0||nx>=WIDTH){
-						// 	score++;
-						// }
-						score+=150;
 
-					}
-					// if(ny<HEIGHT&&nx>=0&& nx<WIDTH){
-					// 	if(cur_field[ny][nx]==1){
-					// 		score++;
-					// 	}
-					// }
 
-				}
-				// if(cy>lowy){
-				// 	lowy=cy;
-				// }
-				score+=cy*280;
-				if(cy+1<HEIGHT&&cur_field[cy+1][cx]==0){
-					// score=-10;
-				}
 
-			}
-		}
-    
-	}
 	// score+=100*lowy;
-	Freeze(new_field,&check_block);
+	Freeze(cur_field,&check_block);
 
-	
-	int delta=BreakLine(new_field)*1000;
-	score+=delta;
+	ret=check_block.y;
+
+	ret+=BreakLine(cur_field)*300;
+	// ret=delta;
 	// if(delta){
 	// 	move(50,40);
 	// 	printw("%d // %d",check_block.x,delta);
 	// }
-	return score;
+	return ret;
 }
 
-int RecursiveCalculateScore(struct list_elem* cur, char cur_field[HEIGHT][WIDTH]){
+struct RecursiveRet RecursiveCalculateScore(struct list_elem* cur, char cur_field[HEIGHT][WIDTH]){
+	struct RecursiveRet ret;
+	ret.score=INT32_MIN;
+	
 	if(cur==list_end(&b_list)){
-		return 0;
+		return ret;
 	}
 	struct Block* blk=list_entry(cur,struct Block,elem);
 	char new_field[HEIGHT][WIDTH];
-	struct coor candidate[16];
+	// struct coor candidate[16];
 	int i;
 	int j;
-	int k;
-	int ret=INT32_MIN;
 
-	memcpy(new_field,cur_field,sizeof new_field);
+
+
+
 	for(i=0;i<NUM_OF_ROTATE;i++){ // i= rotate
 		struct range range=NumOfCase[blk->shape][i];
 		for(j=range.min;j<=range.max;j++){ // j = x
 			int res=0;
+			struct RecursiveRet rr;
+			memcpy(new_field,cur_field,sizeof new_field);
+
+			res=CalCulateScore(blk->shape,i,j,new_field);
 			
-			res=CalCulateScore(blk->shape,i,j,new_field,candidate);
-			
-			for(k=0;k<4;k++){ // 4 : 4/16,filled
- 				new_field[candidate[k].y][candidate[k].x]=1;
+
+			rr=RecursiveCalculateScore(cur->next,new_field);	
+
+			if(res+rr.score>=ret.score){
+				ret.score=res+rr.score;
+				ret.x=j;
+				ret.rotate=i;
 			}
-			res+=RecursiveCalculateScore(cur->next,new_field);	
-			if(res>ret){
-				ret=res;
-			}
-			for(k=0;k<4;k++){ // 4 : 4/16,filled
- 				new_field[candidate[k].y][candidate[k].x]=0;
-			}
+
 		}
 	}
 	return ret;
@@ -875,9 +883,9 @@ void RecommendNextBlock(void){
 	cur_block_->x=recommend_result[index].x;
 	cur_block_->rotate=index;
 	rec_block_=*cur_block_;
-	while(CheckToMove(&rec_block_)){
-		rec_block_.y++;
-	}
+	// while(CheckToMove(&rec_block_,)){
+		// rec_block_.y++;
+	// }
 	rec_block_.y--;
 	// move(50,50);
 	// printw("%d",score);
