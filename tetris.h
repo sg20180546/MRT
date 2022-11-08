@@ -39,7 +39,7 @@
 
 
 /* RECOMMONED */
-int REC_CAL=2;
+int REC_CAL=4;
 #define PTHREAD_N 4
 #define CHILDREN_MAX 36
 jmp_buf jbuf;
