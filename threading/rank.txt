@@ -1,0 +1,12 @@
+11
+test5 390
+test6 380
+qqqq 350
+test5 320
+test3 310
+test8 300
+test4 260
+test6 210
+test1 90
+ 0
+ 0
