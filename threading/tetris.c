@@ -323,13 +323,15 @@ void play(){
 						rr.x=recommend_result[i].x;
 					}
 				}
-
+				if(!(rr.rotate<4&&rr.rotate>=0&rr.x>=-2&&rr.x<WIDTH-1)){
+					bf();
+				}
 					// rr=RecursiveCalculateScore(list_front(&b_list),field);
-					if(!(rr.rotate<4&&rr.rotate>=0)){
+					// if(!(rr.rotate<4&&rr.rotate>=0)){
 
-						rr.rotate=rand()%NUM_OF_ROTATE;
-						rr.x=WIDTH/2;
-					}
+					// 	rr.rotate=rand()%NUM_OF_ROTATE;
+					// 	rr.x=WIDTH/2;
+					// }
 	
 				cur_block_->x=rr.x;
 				cur_block_->rotate=rr.rotate;
@@ -403,6 +405,10 @@ void play(){
 	}while(1);
 
 	alarm(0);
+	int i;
+	for(i=0;i<PTHREAD_N;i++){
+		pthread_cancel((pthread_t)tid[i]);
+		}
 	getch();
 	DrawBox(HEIGHT/2-1,WIDTH/2-5,1,10);
 	move(HEIGHT/2,WIDTH/2-4);
@@ -498,7 +504,7 @@ void BlockDown(int sig){
 
 		Freeze(field,cur_block_);
 
-		gameOver=CheckGameOver(cur_block_);
+
 		
 		list_remove(&cur_block_->elem);
 		
@@ -512,7 +518,7 @@ void BlockDown(int sig){
 		next_block_=list_entry(list_front(&b_list)->next,struct Block,elem);
 		
 
-
+		gameOver=CheckGameOver(cur_block_);
 		
 
 		DrawNextBlock(next_block_->shape);
