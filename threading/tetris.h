@@ -61,12 +61,14 @@ pthread_t tid[PTHREAD_N];
 int thread_identifier=0;
 sem_t worker_mutex[PTHREAD_N];
 
-struct recommend_res{
+struct RecursiveRet{
 	int score;
 	int x;
+	int rotate;
 };
 
-struct recommend_res recommend_result[PTHREAD_N];
+struct RecursiveRet recommend_result[PTHREAD_N];
+
 struct range{
     int min;
     int max;
@@ -76,11 +78,7 @@ struct coor{
 	int y;
 };
 
-struct RecursiveRet{
-	int score;
-	int x;
-	int rotate;
-};
+
 const struct range NumOfCase[NUM_OF_SHAPE][NUM_OF_ROTATE]={
     {
         {0,6},{-1,8},{0,6},{-1,8}
