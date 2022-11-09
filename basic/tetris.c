@@ -321,12 +321,12 @@ void play(){
 				// assert(cur_block_->rotate<4&&cur_block_->rotate>=0);
 				// while(1){
 					rr=RecursiveCalculateScore(list_front(&b_list),field);
-					if(!(rr.rotate<4&&rr.rotate>=0)){
-						move(50,50);
-						printw("%d %d",rr.rotate,rr.x);
-						// exit(0);
-						rr.rotate=rand()%NUM_OF_ROTATE;
-					}
+					// if(!(rr.rotate<4&&rr.rotate>=0)){
+					// 	move(50,50);
+					// 	// printw("%d %d",rr.rotate,rr.x);
+					// 	// exit(0);
+					// 	rr.rotate=rand()%NUM_OF_ROTATE;
+					// }
 				// }
 				cur_block_->x=rr.x;
 				cur_block_->rotate=rr.rotate;
@@ -384,9 +384,8 @@ void play(){
 		struct Block check_block=*cur_block_;
 		check_block.y++;
 		can_move=CheckToMove(&check_block,field);
-		move(50,50);
-		printw("%d",cur_block_->x);
-		// printw("%d",CalCulateScore(check_block.shape,check_block.rotate,check_block.x,field));
+
+
 		if(!can_move){
 			DrawBlock(cur_block_,' ');
 			Freeze(field,cur_block_);
