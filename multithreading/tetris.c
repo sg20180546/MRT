@@ -323,9 +323,9 @@ void play(){
 						rr.x=recommend_result[i].x;
 					}
 				}
-				if(!(rr.rotate<4&&rr.rotate>=0&rr.x>=-2&&rr.x<WIDTH-1)){
-					bf();
-				}
+				// if(!(rr.rotate<4&&rr.rotate>=0&rr.x>=-2&&rr.x<WIDTH-1)){
+				// 	bf();
+				// }
 					// rr=RecursiveCalculateScore(list_front(&b_list),field);
 					// if(!(rr.rotate<4&&rr.rotate>=0)){
 
