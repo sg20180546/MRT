@@ -19,6 +19,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <semaphore.h>
+#include <time.h>
 #define WIDTH	10
 #define HEIGHT	22
 #define NOTHING	0
@@ -104,12 +105,17 @@ const struct range NumOfCase[NUM_OF_SHAPE][NUM_OF_ROTATE]={
 };
 
 
+time_t play_start_time;
+time_t score_time;
+double time_time;
+time_t space_time=1;
 
 
 
 int fd;
 long block_id;
 /* [blockShapeID][# of rotate][][]*/
+
 const char block[NUM_OF_SHAPE][NUM_OF_ROTATE][BLOCK_HEIGHT][BLOCK_WIDTH] ={
 	{/*[0][][][]					▩▩▩▩*/
 		{/*[][0][][]*/
@@ -447,4 +453,6 @@ void InitBlock(struct Block** blk);
 int CalCulateScore(int shape,int rotate,int x,char cur_field[HEIGHT][WIDTH]);
 struct RecursiveRet RecursiveCalculateScore(struct list_elem* cur, char cur_field[HEIGHT][WIDTH]);
 
+
+// to TA : about eval size, I dont use malloc at all(all in stack recursive) always space(t) is 1
 #endif
