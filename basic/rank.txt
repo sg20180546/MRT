@@ -1,4 +1,4 @@
-11
+12
 test5 390
 test6 380
 qqqq 350
@@ -7,6 +7,7 @@ test3 310
 test8 300
 test4 260
 test6 210
+normal 190
 test1 90
  0
  0

@@ -42,7 +42,7 @@ int main(int argc,char** argv){
 	srand((unsigned int)time(NULL));
 	list_init(&b_list);
 
-	// InitRec();
+
 
 	while(!exit){
 		recommend_mode=false;
@@ -57,7 +57,6 @@ int main(int argc,char** argv){
 			break;
 		case MENU_RECM:
 			recommend_mode=true;
-			// InitRec();
 			play();
 			break;
 		case MENU_EXIT: 
@@ -79,6 +78,7 @@ bool CheckGameOver(struct Block* blk){
 			if(block[blk->shape][blk->rotate][i][j]==1){
 				
 				if(field[blk->y + i][blk->x+j]==1){
+
 					return true;
 				}
 			}
@@ -108,7 +108,7 @@ void InitTetris(){
 	
 	DrawField();
 
-	DrawBlock(cur_block_,' ');
+
 	
 	DrawNextBlock(next_block_->shape);
 
@@ -305,58 +305,25 @@ void play(){
 		if(recommend_mode){
 			
 			if(!can_move){
-				// setjmp(&jbuf);
-				// RecommendNextBlock();
-				// int i;
-				// int index;
-				// int score=INT32_MIN;
-				// for(i=0;i<PTHREAD_N;i++){
-				// 	sem_post(&worker_mutex[i]);
-				// }
-				
+
 				DeleteBlock(&cur_block_);
 				DeleteBlock(&rec_block_);
-				struct RecursiveRet rr;
-
-				// assert(cur_block_->rotate<4&&cur_block_->rotate>=0);
-				// while(1){
-					rr=RecursiveCalculateScore(list_front(&b_list),field);
-					// if(!(rr.rotate<4&&rr.rotate>=0)){
-					// 	move(50,50);
-					// 	// printw("%d %d",rr.rotate,rr.x);
-					// 	// exit(0);
-					// 	rr.rotate=rand()%NUM_OF_ROTATE;
-					// }
-				// }
+				struct RecursiveRet rr=RecursiveCalculateScore(list_front(&b_list),field);
+				assert(rr.rotate<4&&rr.rotate>=0);
 				cur_block_->x=rr.x;
 				cur_block_->rotate=rr.rotate;
-				
+				DrawBlock(cur_block_,' ');
 				rec_block_=*cur_block_;
+				// gameOver=;
+				if(CheckGameOver(&rec_block_)){
+					break;
+				}
+
 				while(CheckToMove(&rec_block_,field)){
 					rec_block_.y++;
 				}
 				rec_block_.y--;
-				// move(50,50);
-				// printw("%d",rr.score);
 
-				// sem_wait(&global_mutex);
-				// for(i=0;i<PTHREAD_N;i++){
-				// 	if(recommend_result[i].score>score){
-				// 		index=i;
-				// 		score=recommend_result[i].score;
-				// 	}
-				// }
-				// DeleteBlock(cur_block_);
-				// cur_block_->x=recommend_result[index].x;
-				// cur_block_->rotate=index;
-				// rec_block_=*cur_block_;
-
-				// while(CheckToMove(&rec_block_)){
-				// 	rec_block_.y++;
-				// }
-				// rec_block_.y--;
-				// move(50,50);
-				// printw("%d",score);
 			}
 			DrawBlock(&rec_block_,'R');
 
@@ -369,9 +336,7 @@ void play(){
 		command = GetCommand();
 		if(ProcessCommand(command)==QUIT){
 			int i;
-			for(i=0;i<PTHREAD_N;i++){
-				pthread_cancel((pthread_t)tid[i]);
-			}
+
 			alarm(0);
 			DrawBox(HEIGHT/2-1,WIDTH/2-5,1,10);
 			move(HEIGHT/2,WIDTH/2-4);
@@ -386,6 +351,7 @@ void play(){
 		can_move=CheckToMove(&check_block,field);
 
 
+		// printw("%d",CalCulateScore(check_block.shape,check_block.rotate,check_block.x,field));
 		if(!can_move){
 			DrawBlock(cur_block_,' ');
 			Freeze(field,cur_block_);
@@ -419,6 +385,8 @@ void play(){
 	}while(1);
 
 	alarm(0);
+	int i;
+
 	getch();
 	DrawBox(HEIGHT/2-1,WIDTH/2-5,1,10);
 	move(HEIGHT/2,WIDTH/2-4);
@@ -453,13 +421,13 @@ bool CheckToMove(struct Block* check_block,char f[HEIGHT][WIDTH]){
 				if(check_block->y+i>=HEIGHT ){
 					return false;
 				}
-
+				if(check_block->x+j<0 || check_block->x+j>=WIDTH){
+					return false;
+				}		
 				if(f[check_block->y+i][check_block->x+j]==1){
 					return false;	
 				}
-				if(check_block->x+j<0 || check_block->x+j>=WIDTH){
-					return false;
-				}
+
 
 			}
 		}
@@ -496,25 +464,33 @@ void BlockDown(int sig){
 
 
 	struct Block check_block=*cur_block_;
-	check_block.y++;
 
-	can_move=CheckToMove(&check_block,field);
 
 	if(recommend_mode){
-		while (CheckToMove(&check_block,field))
+		do
 		{
+			/* code */
 			check_block.y++;
-		}
+		} while (CheckToMove(&check_block,field));
+		
+		// while (CheckToMove(&check_block,field))
+		// {
+		// 	check_block.y++;
+		// }
 		check_block.y--;
 		// DeleteBlock(cur_block_);
 		
-	}
+	}else{
+		check_block.y++;
 
+
+	}
+	can_move=CheckToMove(&check_block,field);
 	if(!can_move){ 
 
 		Freeze(field,cur_block_);
 
-		gameOver=CheckGameOver(cur_block_);
+
 		
 		list_remove(&cur_block_->elem);
 		
@@ -528,7 +504,7 @@ void BlockDown(int sig){
 		next_block_=list_entry(list_front(&b_list)->next,struct Block,elem);
 		
 
-
+		gameOver=CheckGameOver(cur_block_);
 		
 
 		DrawNextBlock(next_block_->shape);
@@ -662,7 +638,9 @@ int BreakLine(char f[HEIGHT][WIDTH]){
 
 		if(can_break){
 			// bf();
+
 			memcpy(f[1],f[0],sizeof(char)*WIDTH*(i));
+			memset(f[0],0,sizeof(char)*WIDTH);
 			delta++;
 			i++;
 		}
@@ -673,118 +651,6 @@ int BreakLine(char f[HEIGHT][WIDTH]){
 
 
 
-// thread 1:
-//     pthread_mutex_lock(&mutex);
-//     while (!condition)
-//         pthread_cond_wait(&cond, &mutex);
-//     /* do something that requires holding the mutex and condition is true */
-//     pthread_mutex_unlock(&mutex);
-
-// thread2:
-//     pthread_mutex_lock(&mutex);
-//     /* do something that might make condition true */
-//     pthread_cond_signal(&cond);
-//     pthread_mutex_unlock(&mutex);
-
-void worker(void * arg){
-	pthread_detach(pthread_self());
-	sem_wait(&worker_completed_mutex);
-    int identifier=thread_identifier%PTHREAD_N;
-	thread_identifier++;
-	sem_post(&worker_completed_mutex);
-    // pthread_cond_wait(),
-    char cur_field[HEIGHT][WIDTH];
-    
-    while(1){
-        // calculation
-		// pthread_cond_wait(&cond,NULL);
-		sem_wait(&worker_mutex[identifier]);
-		int score=0;
-        int i;
-		int j;
-		int result_x;
-		struct coor candidate[16];
-
-        struct Block* first=list_entry(list_front(&b_list),struct Block,elem);
-
-        struct range* range=&NumOfCase[first->shape][identifier];
-		
-        // calculate with field
-		// if(1){
-			for(i=range->min;i<=range->max;i++){
-				struct coor coor[4];
-				int res=CalCulateScore(first->shape,identifier,i,cur_field);
-				memcpy(candidate,coor,sizeof(struct coor)*4);
-				memcpy(cur_field,field,sizeof field);
-
-				for(j=0;j<4;j++){
-					// if(candidate[j].y<0||candidate[j].x<0){
-					// 	continue;
-					// }
-					cur_field[candidate[j].y][candidate[j].x]=1;
-				}	
-				// res+=RecursiveCalculateScore(first->elem.next,cur_field);
-				
-				if(res>=score){
-					score=res;
-					result_x=i;
-				}
-			}
-		// }
-		// else{
-		// 	for(i=range->max;i>=range->min;i--){
-		// 		struct coor coor[16];
-		// 		int res=CalCulateScore(first->shape,identifier,i,cur_field,coor);
-		// 		memcpy(candidate,coor,sizeof(struct coor)*16);
-		// 		memcpy(cur_field,field,sizeof field);
-
-		// 		for(j=0;j<4;j++){
-		// 			cur_field[candidate[j].y][candidate[j].x]=1;
-		// 		}	
-		// 		res+=RecursiveCalculateScore(first->elem.next,cur_field);
-				
-		// 		if(res>=score){
-		// 			score=res;
-		// 			result_x=i;
-		// 		}
-		// 	}
-		// }
-
-
-
-
-
-        sem_wait(&worker_completed_mutex);
-		recommend_result[identifier].score=score;
-		recommend_result[identifier].x=result_x;
-        worker_completed++;
-        sem_post(&worker_completed_mutex);
-        if(worker_completed==4){
-			worker_completed=0;
-            sem_post(&global_mutex);
-        }
-        
-    }
-}
-
-void InitRec(){
-    int i;
-    t_count=0;
-    worker_completed=0;
-    sem_init(&global_mutex,0,0);
-    sem_init(&worker_completed_mutex,0,1);
-    // root=malloc(sizeof* malloc);
-    // sem_init(&root->recnode_mutex,0,1);
-    for(i=0;i<PTHREAD_N;i++){
-		sem_init(&worker_mutex[i],0,0);
-    }
-    for(i=0;i<PTHREAD_N;i++){
-        pthread_create(&tid[i],NULL,worker,NULL);
-    }
-    // for(i=0;i<PTHREAD_N-1;i++){
-    //     assert(tid[i]+1==tid[i+1]);
-    // }
-}
 
 int dx[]={-1,1,0};
 int dy[]={0,0,1};
@@ -812,8 +678,16 @@ int CalCulateScore(int shape,int rotate,int x,char cur_field[HEIGHT][WIDTH]){
 	Freeze(cur_field,&check_block);
 
 	ret=check_block.y;
+	for(i=0;i<BLOCK_HEIGHT;i++){
+		for(j=0;j<BLOCK_WIDTH;j++){
+			if(block[shape][rotate][i][j]==1){
+				ret+=i;
+			}
+		}
+	}
+	ret+=BreakLine(cur_field)*10000;
 
-	ret+=BreakLine(cur_field)*300;
+
 	// ret=delta;
 	// if(delta){
 	// 	move(50,40);
@@ -823,13 +697,16 @@ int CalCulateScore(int shape,int rotate,int x,char cur_field[HEIGHT][WIDTH]){
 }
 
 struct RecursiveRet RecursiveCalculateScore(struct list_elem* cur, char cur_field[HEIGHT][WIDTH]){
+	struct Block* blk=list_entry(cur,struct Block,elem);
 	struct RecursiveRet ret;
-	ret.score=INT32_MIN;
-	
+	ret.score=0;
+	ret.rotate=0;
+	ret.x=blk->x;
+
 	if(cur==list_end(&b_list)){
 		return ret;
 	}
-	struct Block* blk=list_entry(cur,struct Block,elem);
+	assert(blk->rotate<4&&blk->rotate>=0);
 	char new_field[HEIGHT][WIDTH];
 	// struct coor candidate[16];
 	int i;
@@ -858,34 +735,12 @@ struct RecursiveRet RecursiveCalculateScore(struct list_elem* cur, char cur_fiel
 
 		}
 	}
+	// assert(ret.rotate<4&&ret.rotate>=0);
+	if(ret.rotate>=4||ret.rotate<0||
+		ret.x>WIDTH||ret.x<-2){
+		ret.rotate=0;
+		ret.x=WIDTH/2;
+		ret.score=0;
+	}
 	return ret;
-}
-
-void RecommendNextBlock(void){
-	int i;
-	int j;
-	int index;
-	int score=INT32_MIN;
-	for(i=0;i<PTHREAD_N;i++){
-		sem_post(&worker_mutex[i]);
-	}
-	sem_wait(&global_mutex);
-	for(i=0;i<PTHREAD_N;i++){
-		if(recommend_result[i].score>=score){
-			index=i;
-			score=recommend_result[i].score;
-		}
-	}
-	DeleteBlock(&rec_block_);
-	
-	DeleteBlock(cur_block_);
-	cur_block_->x=recommend_result[index].x;
-	cur_block_->rotate=index;
-	rec_block_=*cur_block_;
-	// while(CheckToMove(&rec_block_,)){
-		// rec_block_.y++;
-	// }
-	rec_block_.y--;
-	// move(50,50);
-	// printw("%d",score);
 }

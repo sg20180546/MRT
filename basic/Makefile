@@ -4,7 +4,7 @@ CC=gcc
 
 .PHONY: a.out tetris.o
 a.out: tetris.o rank.o list.o
-	$(CC) -g -o $@ $(OBEJCT) -lncurses -lpthread
+	$(CC) -g -o $@ $(OBEJCT) -lncurses
 
 list.o:
 	$(CC) $(CFLAGS) list.c

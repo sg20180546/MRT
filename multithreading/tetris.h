@@ -446,5 +446,5 @@ void InitBlock(struct Block** blk);
 
 int CalCulateScore(int shape,int rotate,int x,char cur_field[HEIGHT][WIDTH]);
 struct RecursiveRet RecursiveCalculateScore(struct list_elem* cur, char cur_field[HEIGHT][WIDTH]);
-void RecommendNextBlock(void);
+
 #endif
