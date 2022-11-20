@@ -2,18 +2,6 @@
 
 
 ## 1. (Basic) Tetris
-
-(0,0)------------	
-	|			|
-	|			|
-	|			|
-	|			|
-	|			|
-	|			|
-	|			|
-	|			|
-	-------------(10,22)
-
 1) Rank system
 - Sorted Linked List
 2) Shadow block

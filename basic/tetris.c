@@ -308,7 +308,15 @@ void play(){
 
 				DeleteBlock(&cur_block_);
 				DeleteBlock(&rec_block_);
+				
+				time_t start=time(0);
 				struct RecursiveRet rr=RecursiveCalculateScore(list_front(&b_list),field);
+				time_t end=time(0);
+				double duration = (double)difftime(end, start);
+				move(50,50);
+				printw("The total time for calculating : %lf seconds\n",
+				duration);
+
 				assert(rr.rotate<4&&rr.rotate>=0);
 				cur_block_->x=rr.x;
 				cur_block_->rotate=rr.rotate;

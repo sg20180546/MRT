@@ -57,6 +57,7 @@ int main(int argc,char** argv){
 			break;
 		case MENU_RECM:
 			recommend_mode=true;
+			play_start_time=time(0);
 			InitRec();
 			play();
 			break;
@@ -106,7 +107,8 @@ void InitTetris(){
 	score=0;	
 	gameOver=false;
 	timed_out=0;
-
+ 	score_time=0;
+	time_time=0;
 	DrawOutline();
 
 	
@@ -221,6 +223,7 @@ void DrawField(){
 void PrintScore(int score){
 	move(11,WIDTH+11);
 	printw("%8d",score);
+	move(15,WIDTH+11);			
 }
 
 void DrawNextBlock(int next_blk_shape){
@@ -315,6 +318,7 @@ void play(){
 				struct RecursiveRet rr;
 				rr.score=INT32_MIN;
 				int i;
+				time_t start=time(0);
 				for(i=0;i<PTHREAD_N;i++){
 					sem_post(&worker_mutex[i]);
 				}
@@ -331,16 +335,18 @@ void play(){
 						rr.x=recommend_result[i].x;
 					}
 				}
-				// if(!(rr.rotate<4&&rr.rotate>=0&rr.x>=-2&&rr.x<WIDTH-1)){
-				// 	bf();
-				// }
-					// rr=RecursiveCalculateScore(list_front(&b_list),field);
-					// if(!(rr.rotate<4&&rr.rotate>=0)){
+				time_t end=time(0);
+				double duration = (double)difftime(end, start);
+				time_time+=duration;
+				double score_floating=score;
 
-					// 	rr.rotate=rand()%NUM_OF_ROTATE;
-					// 	rr.x=WIDTH/2;
-					// }
-				
+				move(20,30);
+				printw("play time=%0.1lf, score(t)=%0.1lf , time(t)=%0.1lf,  space(t)=1 ",(double)difftime(time(0),play_start_time),score_floating,time_time );
+				double time_eff=score_floating/time_time;
+				double space_eff=score_floating/1; // no malloc
+				refresh();
+				move(22,30);
+				printw("time efficiency : %0.1lf // space efficiency : %0.1lf",time_eff,space_eff);
 				cur_block_->x=rr.x;
 				cur_block_->rotate=rr.rotate;
 				DrawBlock(cur_block_,' ');
