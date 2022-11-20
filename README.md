@@ -4,6 +4,8 @@
 ## 1. (Basic) Tetris
 1) Rank system
 - Sorted Linked List
+![image](https://user-images.githubusercontent.com/81512075/202933506-a3ab300a-3489-467d-b53e-dd3e28ec0647.png)
+
 2) Shadow block
 
 3) Greedy Recommendation Algorithm
