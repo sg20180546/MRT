@@ -19,3 +19,5 @@
     - c-thread wait for worker_mutex[thread_identifier], run after at block 'Freezed'.
     - Each c-thread calcuate recursively for different rotation of first block.
     - After c-thread calcuation complete, woke up main thread(sem_post(&global_mutex))
+    
+![image](https://user-images.githubusercontent.com/81512075/202933463-1710f32c-e4bf-4a1d-a55f-32a3a86725e9.png)
