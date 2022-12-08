@@ -1,5 +1,5 @@
 # Multithreading Recommendation Tetris with ncurses (MRT)
-
+<img src="https://user-images.githubusercontent.com/81512075/206482077-693c9a4f-cda3-49ae-932d-eb1fc0a5caa8.png" width=400 height=400>  </img>
 
 ## 1. (Basic) Tetris
 1) Rank system
